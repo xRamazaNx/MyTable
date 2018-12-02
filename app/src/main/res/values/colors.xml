@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="text_color_primary">#d6d6d6</color>
+    <color name="colorPrimary">#3F51B5</color>
+    <color name="colorPrimaryDark">#303f9f</color>
+    <color name="colorAccent">#ff4081</color>
+
+    <color name="gray_light0">#fafafa</color>
+    <color name="gray_light1">#f9f9f9</color>
+    <color name="gray_light2">#f8f8f8</color>
+    <color name="gray_light3">#f7f7f7</color>
+    <color name="gray_light4">#f6f6f6</color>
+    <color name="gray_light">#f1f1f1</color>
+    <color name="gray_center">#e2e2e2</color>
+    <color name="select_stroke_column">#f0f0f0</color>
+    <color name="gray_light_counter">#bebebe</color>
+    <color name="gray">#323232</color>
+    <color name="dark_gray">#282828</color>
+    <color name="counter_cell">#181818</color>
+    <color name="color_normal">#a1a1a1</color>
+    <color name="color_activated">#008c72</color>
+    <color name="color_select_cell">#4184f3</color>
+    <color name="color_select_stroke_column">#474184f3</color>
+    <color name="color_select_cell_stroke_column">#164184f3</color>
+
+</resources>

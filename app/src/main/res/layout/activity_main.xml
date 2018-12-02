@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white"
+    tools:context="ru.developer.press.mytable.MainActivity">
+
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/gray_light"
+        android:minHeight="?attr/actionBarSize"
+        android:theme="?attr/actionBarTheme"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <ru.developer.press.mytable.views.ScrollMain
+        android:id="@+id/scroll_view_main"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/toolbar">
+        <!--app:layout_constraintBottom_toTopOf="@+id/adView"-->
+
+        <LinearLayout
+            android:id="@+id/container_cards"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp"/>
+    </ru.developer.press.mytable.views.ScrollMain>
+
+    <!--<com.google.android.gms.ads.AdView-->
+        <!--xmlns:ads="http://schemas.android.com/apk/res-auto"-->
+        <!--android:id="@+id/adView"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:layout_alignParentBottom="true"-->
+        <!--android:layout_centerHorizontal="true"-->
+        <!--android:visibility="gone"-->
+        <!--ads:adSize="BANNER"-->
+        <!--ads:adUnitId="ca-app-pub-3940256099942544/6300978111"-->
+        <!--ads:layout_constraintBottom_toBottomOf="parent">-->
+    <!--</com.google.android.gms.ads.AdView>-->
+
+    <uk.co.markormesher.android_fab.FloatingActionButton
+        android:id="@+id/floatingActionButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:buttonBackgroundColour="@color/gray"
+        app:buttonIcon="@drawable/ic_action_button"
+        >
+        <!--app:layout_constraintBottom_toTopOf="@+id/adView"-->
+
+    </uk.co.markormesher.android_fab.FloatingActionButton>
+    <!--<FrameLayout-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--app:layout_constraintBottom_toTopOf="@+id/adView"-->
+        <!--app:layout_constraintRight_toRightOf="parent"-->
+        <!--&gt;-->
+
+
+
+        <!--<com.wangjie.rapidfloatingactionbutton.RapidFloatingActionLayout-->
+            <!--xmlns:rfal="http://schemas.android.com/apk/res-auto"-->
+            <!--android:id="@+id/activity_main_rfal"-->
+            <!--android:layout_width="wrap_content"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--rfal:rfal_frame_alpha="0.5"-->
+            <!--rfal:rfal_frame_color="@android:color/white"-->
+            <!--&gt;-->
+
+            <!--<android.support.design.widget.FloatingActionButton-->
+                <!--android:id="@+id/floatingActionButton"-->
+                <!--android:layout_width="wrap_content"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:layout_margin="16dp"-->
+                <!--android:clickable="true"-->
+                <!--android:focusable="true"-->
+                <!--android:tint="@color/gray_light"-->
+                <!--android:visibility="gone"-->
+                <!--app:fabCustomSize="56dp"-->
+                <!--app:fabSize="normal"-->
+                <!--app:layout_constraintBottom_toTopOf="@+id/adView"-->
+                <!--app:layout_constraintRight_toRightOf="parent"-->
+                <!--app:srcCompat="@drawable/ic_action_button"/>-->
+
+            <!--<com.wangjie.rapidfloatingactionbutton.RapidFloatingActionButton-->
+                <!--xmlns:rfab="http://schemas.android.com/apk/res-auto"-->
+                <!--android:id="@+id/activity_main_rfab"-->
+                <!--android:layout_width="wrap_content"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:layout_alignParentBottom="true"-->
+                <!--android:layout_alignParentEnd="true"-->
+                <!--android:layout_alignParentRight="true"-->
+                <!--android:layout_marginBottom="15dp"-->
+                <!--android:layout_marginEnd="15dp"-->
+                <!--android:layout_marginRight="15dp"-->
+                <!--android:padding="8dp"-->
+                <!--rfab:rfab_color_normal="#37474f"-->
+                <!--rfab:rfab_color_pressed="@color/color_activated"-->
+                <!--rfab:rfab_drawable="@drawable/rfab__drawable_rfab_default"-->
+                <!--rfab:rfab_shadow_color="#999999"-->
+                <!--rfab:rfab_shadow_dx="0dp"-->
+                <!--rfab:rfab_shadow_dy="5dp"-->
+                <!--rfab:rfab_shadow_radius="7dp"-->
+                <!--rfab:rfab_size="normal"/>-->
+        <!--</com.wangjie.rapidfloatingactionbutton.RapidFloatingActionLayout>-->
+    <!--</FrameLayout>-->
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:background="@drawable/shadow_popup_window"
+        android:rotation="180"
+        app:layout_constraintTop_toBottomOf="@+id/toolbar">
+
+    </FrameLayout>
+
+</android.support.constraint.ConstraintLayout>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:app="http://schemas.android.com/apk/res-auto"
+              xmlns:tools="http://schemas.android.com/tools"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_margin="4dp"
+              android:background="@android:color/white"
+              android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="4dp"
+        android:background="@drawable/contur_card"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/name_card"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginLeft="8dp"
+            android:layout_marginRight="8dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:textColor="@color/dark_gray"
+            android:textSize="16sp"
+            tools:text="имя таблицы"/>
+
+        <ImageButton
+            android:id="@+id/menu_tablecard_imButton"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_gravity="bottom"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/edit_table"
+            app:srcCompat="@drawable/ic_edit_tablecard"/>
+
+    </LinearLayout>
+
+
+</LinearLayout>

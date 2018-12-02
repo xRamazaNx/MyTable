@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+      xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--<item-->
+        <!--android:id="@+id/name_column_m"-->
+        <!--android:icon="@drawable/ic_edit_name"-->
+        <!--android:title="@string/edit_name"-->
+        <!--app:showAsAction="always"/>-->
+    <item
+        android:id="@+id/rename_column"
+        android:icon="@drawable/ic_edit_name"
+        android:title="@string/rename"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/setting_column"
+        android:icon="@drawable/format_column"
+        android:title="@string/add"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/delete_column"
+        android:icon="@drawable/ic_delete_forever_button"
+        android:title="@string/add"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/undo"
+        android:icon="@drawable/ic_undo"
+        android:title="@string/undo"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/redo"
+        android:icon="@drawable/ic_redo"
+        android:title="@string/redo"
+        app:showAsAction="always"/>
+</menu>

@@ -1,0 +1,86 @@
+<resources>
+    <string name="app_name">            Мои таблицы</string>
+    <string name="add">                 Добавить</string>
+    <string name="number">              №</string>
+    <string name="name_column">         Название столбца</string>
+    <string name="columns">             Столбцы</string>
+    <string name="name">                Имя</string>
+    <string name="setting_table">       Настройка таблицы</string>
+    <string name="cancel">              Отмена</string>
+    <string name="OK">                  Ок</string>
+    <string name="Active">              Активные</string>
+    <string name="input_type">          Тип</string>
+    <string name="text">                Текст</string>
+    <string name="type_number">         Числа</string>
+    <string name="date">                Дата</string>
+    <string name="width">Ширина</string>
+    <string name="appearance_title">Заголовки</string>
+    <string name="appearance_cell">Записи</string>
+    <string name="fill_for_width">По ширине экрана</string>
+    <string name="edit_table">Редактирование</string>
+
+    <string name="size">Размер</string>
+    <string name="style">Стиль</string>
+    <string name="color">Цвет</string>
+
+    <string name="default_style">Обычный</string>
+    <string name="bold_style">Жирный</string>
+    <string name="italic_style">Курсив</string>
+    <string name="italic_bold_style">Жирный/курсив</string>
+    <string name="setting_column">Настройка столбца</string>
+    <string name="enter_data">Введите данные</string>
+    <string name="column">cтолбец</string>
+    <string name="new_table_">Новая таблица_</string>
+    <string name="formule">Формула</string>
+    <string name="title">Заголовок</string>
+    <string name="cells">Ячейки</string>
+    <string name="b">B</string>
+    <string name="i">I</string>
+    <string name="name_table">Имя таблицы</string>
+    <string name="edit_name">Редактировать имя</string>
+    <string name="not_delete_all_cells">Невозможно удалить все ячейки</string>
+    <string name="text_size">Размер шрифта</string>
+    <string name="delete">Удалить</string>
+    <string name="rename">Переименовать</string>
+    <string name="date_change">Выбор даты</string>
+    <string name="empty_table">Пустая таблица</string>
+
+    <string-array name="input_type_array">
+
+        <item>Текст</item>
+        <item>Числа</item>
+        <item>Дата</item>
+    </string-array>
+
+    <string-array name="size_text_array">
+        <item>8</item>
+        <item>10</item>
+        <item>12</item>
+        <item>14</item>
+        <item>16</item>
+        <item>18</item>
+        <item>20</item>
+        <item>22</item>
+        <item>24</item>
+        <item>26</item>
+        <item>28</item>
+    </string-array>
+
+    <string-array name="style_text_array">
+        <item>Обычный</item>
+        <item>Жирный</item>
+        <item>Курсив</item>
+        <item>Жирный/курсив</item>
+    </string-array>
+    <string name="contacts">Контакты</string>
+    <string name="full_name">Ф.И.О</string>
+    <string name="phone">Телефон</string>
+    <string name="mail">Почта</string>
+    <string name="business">Работа</string>
+    <string name="undo">шаг назад</string>
+    <string name="redo">шаг вперед</string>
+    <string name="n">№</string>
+    <string name="new_name">Новое имя</string>
+    <string name="fixed_height">Фиксировать высоту ячеек</string>
+    <string name="send">Поделиться</string>
+</resources>
