@@ -14,8 +14,8 @@
     <color name="gray_center">#e2e2e2</color>
     <color name="select_stroke_column">#f0f0f0</color>
     <color name="gray_light_counter">#bebebe</color>
-    <color name="gray">#323232</color>
-    <color name="dark_gray">#282828</color>
+    <color name="gray">#acacac</color>
+    <color name="dark_gray">#313131</color>
     <color name="counter_cell">#181818</color>
     <color name="color_normal">#a1a1a1</color>
     <color name="color_activated">#008c72</color>

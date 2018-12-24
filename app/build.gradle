@@ -3,8 +3,8 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 28
     defaultConfig {
-        applicationId "ru.developer.press.mytable"
-        minSdkVersion 15
+        applicationId "ru.developer.press.mytable_test"
+        minSdkVersion 16
         targetSdkVersion 28
         multiDexEnabled = true
         versionCode 3
@@ -58,6 +58,7 @@ dependencies {
 
     implementation 'com.github.bumptech.glide:glide:4.8.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.8.0'
+    implementation 'com.google.code.gson:gson:2.8.2'
 
 //    implementation 'io.reactivex.rxjava2:rxjava:2.2.0'
 //    implementation 'io.reactivex.rxjava2:rxandroid:2.0.2'

@@ -5,4 +5,6 @@ public interface UpdateWidth {
     void setWidthForScreen(int tableWidth);
     int getGeneralWidth();
     void onDismiss();
+
+    void stopTracking();
 }

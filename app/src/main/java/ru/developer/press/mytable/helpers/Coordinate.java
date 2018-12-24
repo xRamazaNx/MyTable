@@ -1,6 +1,6 @@
-package ru.developer.press.mytable.model;
+package ru.developer.press.mytable.helpers;
 
-public class CellAbstract {
+public  class Coordinate {
     public float startX = 0;
     public float endX = 0;
     public float startY = 0;
@@ -9,7 +9,6 @@ public class CellAbstract {
     public float width = 0;
     public float height = 0;
 
-    public boolean isTouched;
 
     public void setBounds(float startX, float endX, float startY, float endY) {
 
@@ -17,6 +16,16 @@ public class CellAbstract {
         this.startY = startY;
         this.endX = endX;
         this.endY = endY;
+
+        height = this.endY - this.startY;
+        width = this.endX - this.startX;
+    }
+
+    public void setBounds(Coordinate coordinate) {
+        this.startX = coordinate.startX;
+        this.startY = coordinate.startY;
+        this.endX =   coordinate.endX;
+        this.endY =   coordinate.endY;
 
         height = this.endY - this.startY;
         width = this.endX - this.startX;

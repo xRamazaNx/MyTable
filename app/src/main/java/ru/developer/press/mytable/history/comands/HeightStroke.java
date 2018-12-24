@@ -1,27 +1,31 @@
 package ru.developer.press.mytable.history.comands;
 
 import ru.developer.press.mytable.history.Command;
-import ru.developer.press.mytable.model.TableModel;
+import ru.developer.press.mytable.table.model.TableModel;
 
 public class HeightStroke extends Command {
-    private int oldHeight;
-    private int newHeight;
+    private int [] oldHeight;
+    private int [] newHeight;
 
-    public HeightStroke(int oldHeight, int newHeight){
+    public HeightStroke(int [] oldHeight, int [] newHeight){
         this.oldHeight = oldHeight;
         this.newHeight = newHeight;
     }
 
     @Override
     public void undo(TableModel tableModel) {
-        tableModel.setHeightCells(oldHeight);
-        historyUpdateListener.undo(null);
+        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
+            tableModel.getHeaders().get(i).height = oldHeight[i];
+        }
+        historyUpdateListener.undo(this);
     }
 
     @Override
     public void redo(TableModel tableModel) {
-        tableModel.setHeightCells(newHeight);
-        historyUpdateListener.redo(null);
+        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
+            tableModel.getHeaders().get(i).height = newHeight[i];
+        }
+        historyUpdateListener.redo(this);
     }
 
     @Override
@@ -31,6 +35,11 @@ public class HeightStroke extends Command {
 
     public boolean isEdited() {
 
-        return oldHeight != newHeight;
+        boolean toReturn = false;
+        for (int i = 0; i < oldHeight.length; i++) {
+            if (oldHeight[i] != newHeight[i])
+                toReturn = true;
+        }
+        return toReturn;
     }
 }

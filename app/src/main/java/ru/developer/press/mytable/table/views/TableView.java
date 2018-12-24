@@ -1,4 +1,4 @@
-package ru.developer.press.mytable.table;
+package ru.developer.press.mytable.table.views;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -10,8 +10,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Scroller;
 
+import ru.developer.press.mytable.helpers.Coordinate;
 import ru.developer.press.mytable.interfaces.TableViewListener;
-import ru.developer.press.mytable.model.CellAbstract;
 
 public class TableView extends View {
     private float x, y; // touch coordinate
@@ -20,28 +20,29 @@ public class TableView extends View {
     private GestureDetector gestureDetector;
     // должен реализовать презентер
     private TableViewListener tableListener;
-    CellAbstract coordinateScreen;
+    Coordinate coordinateScreen;
+    private boolean isSelectorWork;
 
     public TableView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         scroller = new Scroller(context);
         gestureDetector = new GestureDetector(getContext(), gestureListener());
-        coordinateScreen = new CellAbstract();
+        coordinateScreen = new Coordinate();
     }
 
     public void setTableListener(TableViewListener tableListener) {
         this.tableListener = tableListener;
     }
 
-    private CellAbstract getCoordinate(){
-        coordinateScreen.setBounds(getScrollX(),getWidth()+getScrollX(),getScrollY(), getHeight()+getScrollY());
+    private Coordinate getCoordinate() {
+        coordinateScreen.setBounds(getScrollX(), getWidth() + getScrollX(), getScrollY(), getHeight() + getScrollY());
         return coordinateScreen;
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         if (tableListener != null)
-            tableListener.drawCells(canvas, getCoordinate());
+            tableListener.draw(canvas, getCoordinate());
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -49,7 +50,10 @@ public class TableView extends View {
     public boolean onTouchEvent(MotionEvent event) {
         x = event.getX();
         y = event.getY();
-
+        if (event.getAction() == MotionEvent.ACTION_UP
+                || event.getAction() == MotionEvent.ACTION_CANCEL) {
+            tableListener.eventUp();
+        }
         if (gestureDetector.onTouchEvent(event))
             return true;
         return true;
@@ -64,6 +68,8 @@ public class TableView extends View {
                     scroller.setFinalX(getScrollX());
                     scroller.setFinalY(getScrollY());
                     scroller.abortAnimation();
+                } else {
+                    isSelectorWork = tableListener.touchCoordinate(x + getScrollX(), y + getScrollY());
                 }
                 return true;
             }
@@ -71,54 +77,25 @@ public class TableView extends View {
             @SuppressLint("CheckResult")
             @Override
             public boolean onSingleTapUp(MotionEvent e) {
-                tableListener.cellClick(x + getScrollX(), y + getScrollY());
+
+                tableListener.click(x + getScrollX(), y + getScrollY(), getCoordinate());
                 return true;
             }
 
             public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-
-                int x = (int) distanceX;
-                int y = (int) distanceY;
-
-                int xOff = -getScrollX(), // точка отчета координат таблицы
-                        yOff = -getScrollY();
-
-                if (xOff <= 0) { // если по горизонтали таблица ушла влево
-                    int mapWidth = tableListener.getTableWidth();
-                    int ostatok = mapWidth - -xOff;
-                    // это остаток таблицы с правой стороны за границой
-                    int posleOstatka = ostatok - getWidth();
-
-                    if (x > posleOstatka) { // если рывок по х будет больше чем остаток таблицы за гранями
-                        x = posleOstatka;
-                    }
-                    if (x < xOff) x = xOff; // если рывок меньще чем координаты начала таблицы
-
-                } else {
-                    x = 0;
-                }
-
-                // тут аналогично
-                if (yOff <= 0) {
-                    int mapHeight = tableListener.getTableHeight();
-                    int ostatok = mapHeight - -yOff;
-                    int posleOstatka = ostatok - getHeight();
-
-                    if (y > posleOstatka) {
-                        y = posleOstatka;
-                    }
-                    if (y < yOff) y = yOff;
-                } else y = 0;
-
                 // сскролим все
-                tableListener.scrollBy(x, y);
+                if (isSelectorWork)
+                    tableListener.moveSelector(TableView.this.x + getScrollX(), TableView.this.y + getScrollY(), getCoordinate());
+                else
+                    tableListener.scrollBy(distanceX, distanceY);
                 return true;
 
             }
 
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-                fling(velocityX, velocityY);
+                if (!isSelectorWork)
+                    fling(velocityX, velocityY);
                 return super.onFling(e1, e2, velocityX, velocityY);
             }
         };
@@ -147,8 +124,6 @@ public class TableView extends View {
             tableListener.scrollTo(x, y); // в этом методе прокручиваются заголовки и нумерация
             if (oldX != getScrollX() || oldY != getScrollY()) {
                 onScrollChanged(getScrollX(), getScrollY(), oldX, oldY);
-//                titleView.onScrollChanged(getScrollX(), getScrollY(), oldX, oldY);
-//                headerView.onScrollChanged(getScrollX(), getScrollY(), oldX, oldY);
             }
 
             postInvalidate();

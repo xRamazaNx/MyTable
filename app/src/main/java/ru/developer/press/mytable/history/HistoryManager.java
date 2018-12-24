@@ -8,11 +8,12 @@ import ru.developer.press.mytable.history.comands.AddColumn;
 import ru.developer.press.mytable.history.comands.AddStroke;
 import ru.developer.press.mytable.history.comands.DeleteColumn;
 import ru.developer.press.mytable.history.comands.DeleteStroke;
-import ru.developer.press.mytable.history.comands.EditColumn;
+import ru.developer.press.mytable.history.comands.EditPrefs;
 import ru.developer.press.mytable.history.comands.RenameColumn;
-import ru.developer.press.mytable.model.Cell;
-import ru.developer.press.mytable.model.ColumnPref;
-import ru.developer.press.mytable.model.TableModel;
+import ru.developer.press.mytable.table.model.Cell;
+import ru.developer.press.mytable.table.model.Column;
+import ru.developer.press.mytable.table.model.Header;
+import ru.developer.press.mytable.table.model.TableModel;
 
 public class HistoryManager implements Serializable {
     private ArrayList<Command> undoCommands;
@@ -66,71 +67,71 @@ public class HistoryManager implements Serializable {
 
     public AddColumn addColumn(int index, TableModel tableModel) {
         ArrayList<Cell> cellsOfColumn = new ArrayList<>();
-        for (int i = 0; i < tableModel.getEntries().size(); i++) {
-            cellsOfColumn.add(tableModel.getEntries().get(i).get(index));
+        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
+            cellsOfColumn.add(tableModel.getHeaders().get(i).getCell(index));
         }
         AddColumn addColumn = new AddColumn(
                 index,
-                tableModel.getColumnsPref().get(index),
+                tableModel.getColumns().get(index),
                 cellsOfColumn);
         undoCommands.add(addColumn);
-        removeMoreComand();
+        removeMoreCommand();
         return addColumn;
     }
 
-    public Command getLastUndoCommand() {
-        return undoCommands.get(undoCommands.size() - 1);
-    }
+//    public Command getLastUndoCommand() {
+//        return undoCommands.get(undoCommands.size() - 1);
+//    }
 
-    public DeleteColumn deleteColumn(int[] index, List<ColumnPref> columnPrefs, TableModel tableModel) {
+    public DeleteColumn deleteColumn(int[] index, List<Column> columns, TableModel tableModel) {
         // это не как ентриес
         ArrayList<ArrayList<Cell>> cellsOfColumns = new ArrayList<>();
         for (int anIndex : index) {
             ArrayList<Cell> cells = new ArrayList<>();
-            for (int i = 0; i < tableModel.getEntries().size(); i++) {
-                Cell cell = tableModel.getEntries().get(i).get(anIndex);
+            for (int i = 0; i < tableModel.getHeaders().size(); i++) {
+                Cell cell = tableModel.getHeaders().get(i).getCell(anIndex);
                 cells.add(cell);
             }
             cellsOfColumns.add(cells);
         }
-        DeleteColumn deleteColumn = new DeleteColumn(index, columnPrefs, cellsOfColumns);
+        DeleteColumn deleteColumn = new DeleteColumn(index, columns, cellsOfColumns);
         undoCommands.add(deleteColumn);
-        removeMoreComand();
+        removeMoreCommand();
         return deleteColumn;
     }
 
     public AddStroke addStroke(int index, TableModel tableModel) {
-        AddStroke addStroke = new AddStroke(index, tableModel.getEntries().get(index));
+        AddStroke addStroke = new AddStroke(index, tableModel.getHeaders().get(index));
         undoCommands.add(addStroke);
 
-        removeMoreComand();
+        removeMoreCommand();
         return addStroke;
     }
 
     public DeleteStroke deleteStroke(int[] index, TableModel tableModel) {
-        ArrayList<ArrayList<Cell>> stroks = new ArrayList<>();
+        ArrayList<Header> headerPrefs = new ArrayList<>();
         for (int anIndex : index) {
-            stroks.add(tableModel.getEntries().get(anIndex));
+            headerPrefs.add(tableModel.getHeaders().get(anIndex));
         }
-        DeleteStroke deleteStroke = new DeleteStroke(index, stroks);
+        DeleteStroke deleteStroke = new DeleteStroke(index, headerPrefs);
         undoCommands.add(deleteStroke);
-        removeMoreComand();
+        removeMoreCommand();
         return deleteStroke;
     }
 
     public void editCell(Command editCell) {
         undoCommands.add(editCell);
-        removeMoreComand();
+        removeMoreCommand();
     }
 
-    public void editColumns(EditColumn editColumns) {
-        if (editColumns.isEditedColumns()) {
+    public void editColumns(EditPrefs editColumns) {
+        if (editColumns.isEditedPrefs()) {
             undoCommands.add(editColumns);
-            removeMoreComand();
+            removeMoreCommand();
         }
     }
 
-    private void removeMoreComand() {
+    private void removeMoreCommand() {
         redoCommands.clear();
         if (undoCommands.size() > moreLenght) { //  в будущем будет зависеть от настроек
             undoCommands.remove(0);
@@ -139,16 +140,16 @@ public class HistoryManager implements Serializable {
 
     public void setWidth(Command widtForScreen) {
         undoCommands.add(widtForScreen);
-        removeMoreComand();
+        removeMoreCommand();
     }
 
     public void setHeightStroke(Command heightStroke) {
         undoCommands.add(heightStroke);
-        removeMoreComand();
+        removeMoreCommand();
     }
 
     public void renameColumn(RenameColumn renameColumn) {
         undoCommands.add(renameColumn);
-        removeMoreComand();
+        removeMoreCommand();
     }
 }

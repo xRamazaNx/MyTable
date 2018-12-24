@@ -4,16 +4,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ru.developer.press.mytable.history.Command;
-import ru.developer.press.mytable.model.Cell;
-import ru.developer.press.mytable.model.TableModel;
+import ru.developer.press.mytable.table.model.Cell;
+import ru.developer.press.mytable.table.model.Header;
+import ru.developer.press.mytable.table.model.TableModel;
 
 public class DeleteStroke extends Command {
-    private List<ArrayList<Cell>> stroks;
+    private List<Header> headerPrefs;
     public int[] index;
 
-    public DeleteStroke(int[] index, List<ArrayList<Cell>> stroks) {
-
-        this.stroks = stroks;
+    public DeleteStroke(int[] index, ArrayList<Header> headerPrefs) {
+        this.headerPrefs = headerPrefs;
         this.index = index;
     }
 
@@ -22,17 +22,18 @@ public class DeleteStroke extends Command {
 
         for (int i = 0; i < index.length; i++) {
             int indexOfLocation = index[i]; // индекс куда добавлять
-            ArrayList<Cell> stroke = stroks.get(i); // столб который надо добавить
-            tableModel.getEntries().add(indexOfLocation, stroke);
+            Header headerPref = headerPrefs.get(i); // префс к строке который надо добавить
+            tableModel.getHeaders().add(indexOfLocation, headerPref);
         }
-        historyUpdateListener.undo(null);
+        historyUpdateListener.undo(this);
 
     }
 
     @Override
     public void redo(TableModel tableModel) {
-        tableModel.getEntries().removeAll(stroks);
-        historyUpdateListener.redo(null);
+        tableModel.getHeaders().removeAll(headerPrefs);
+
+        historyUpdateListener.redo(this);
     }
 
     @Override

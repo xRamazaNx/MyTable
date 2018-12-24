@@ -1,4 +1,4 @@
-package ru.developer.press.mytable.views;
+package ru.developer.press.mytable.helpers;
 
 import android.app.Activity;
 import android.graphics.Color;
@@ -12,7 +12,7 @@ import android.widget.LinearLayout;
 import ru.developer.press.mytable.interfaces.BottomMenuClick;
 import ru.developer.press.myTable.R;
 
-public class ControllerBottomMenu implements View.OnClickListener {
+public class BottomMenuControl implements View.OnClickListener {
     private ImageButton addRightColumn; // также будет добавлять строку вниз
     private ImageButton addDownStroke; // будет добавлять колону в лево
     private ImageButton heightCells;
@@ -23,7 +23,6 @@ public class ControllerBottomMenu implements View.OnClickListener {
     private AddButtonEnum columnMode = AddButtonEnum.ADD_RIGHT_COLUMN;
     private AddButtonEnum strokeMode = AddButtonEnum.ADD_DOWN_STROKE;
     private ImageButton width;
-    private ImageButton settingTable;
 
     public void initView(Activity activity) {
         this.bottomMenu = activity.findViewById(R.id.bottom_menu);
@@ -32,7 +31,7 @@ public class ControllerBottomMenu implements View.OnClickListener {
         addRightColumn = activity.findViewById(R.id.add_column_right_bm);
         addDownStroke = activity.findViewById(R.id.add_stroke_down_bm);
 
-        settingTable = activity.findViewById(R.id.setting_table);
+        ImageButton settingTable = activity.findViewById(R.id.setting_table);
 
         width = activity.findViewById(R.id.width_bm);
         heightCells = activity.findViewById(R.id.height_cells_bm);

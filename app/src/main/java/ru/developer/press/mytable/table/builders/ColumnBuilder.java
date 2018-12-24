@@ -3,178 +3,189 @@ package ru.developer.press.mytable.table.builders;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.text.Layout;
-import android.text.StaticLayout;
-import android.text.TextPaint;
 
 import java.util.ArrayList;
 
 import ru.developer.press.myTable.R;
-import ru.developer.press.mytable.StaticMetods;
+import ru.developer.press.mytable.helpers.Coordinate;
 import ru.developer.press.mytable.interfaces.RenameColumnListener;
-import ru.developer.press.mytable.model.Cell;
-import ru.developer.press.mytable.model.CellAbstract;
-import ru.developer.press.mytable.model.ColumnPref;
-import ru.developer.press.mytable.model.TableModel;
+import ru.developer.press.mytable.table.model.Column;
+import ru.developer.press.mytable.table.model.Header;
+import ru.developer.press.mytable.table.model.TableModel;
 
-public class ColumnBuilder {
+public class ColumnBuilder extends Builder {
 
-    private final Paint paintTouchColumn;
-    private final Paint paintLine;
-    private final TextPaint textPaint;
     private final RenameColumnListener renameColumnListener;
     public int selectColumnCount = 0;
     public int index = 0;
-    private float scaleDp;
-    public float heightColumns;
-    private String oldName;
-    private int oldIndex;
+    private String oldNameColumn;
+    private int oldIndexColumn;
+    private Paint paintNumberColumn;
 
     public ColumnBuilder(Context context, RenameColumnListener renameColumnListener) {
+        super(context);
         this.renameColumnListener = renameColumnListener;
-        paintLine = new Paint();
-        paintLine.setColor(context.getResources().getColor(R.color.gray));
 
-        paintTouchColumn = new Paint();
-        paintTouchColumn.setColor(context.getResources().getColor(R.color.color_select_stroke_column));
-
-        textPaint = new TextPaint();
-        textPaint.setAntiAlias(true);
-
-        scaleDp = context.getResources().getDisplayMetrics().density;
-
+        paintNumberColumn = new Paint();
+        paintNumberColumn.setColor(context.getResources().getColor(R.color.gray_light));
 
     }
 
-    public void drawColumns(Canvas canvas, CellAbstract coordinateDraw, TableModel tableModel) {
-        for (ColumnPref columnPref :
-                tableModel.getColumnsPref()) {
-            if (columnPref.endX < coordinateDraw.startX || columnPref.startX > coordinateDraw.endX )
+
+    public void draw(Canvas canvas, Coordinate coordinateDraw, TableModel tableModel) {
+
+        int offX = tableModel.widthHeaders;
+        float heightColumns = tableModel.heightColumns;
+        int strokeSize = tableModel.getHeaders().size();
+
+
+        ArrayList<Column> columnsPref = tableModel.getColumns();
+        int columnsSize = columnsPref.size();
+        float coordinateStartX = coordinateDraw.startX;
+        float coordinateEndX = coordinateDraw.endX;
+        float coordinateStartY = coordinateDraw.startY;
+
+        for (int i = 0; i < columnsSize; i++) {
+            Column column = columnsPref.get(i);
+            float colEndX = column.endX;
+            float colStartX = column.startX;
+
+            if (colEndX < coordinateStartX || colStartX > coordinateEndX)
                 continue;
-            if (columnPref.isTouched) {
-                canvas.drawRect(columnPref.startX, columnPref.startY + 1, columnPref.endX, columnPref.endY, paintTouchColumn);
-            }
-            drawText(canvas, columnPref);
-            canvas.drawLine(columnPref.endX, 0, columnPref.endX, heightColumns, paintLine);
-        }
+            Paint paintBack = column.paintBack;
+            // фон
+            canvas.drawRect(colStartX + offX + 1, coordinateStartY,
+                    colEndX + offX, coordinateStartY + heightColumns,
+                    paintBack);
 
-    }
-
-    private void drawText(Canvas canvas, ColumnPref columnPref) {
-        canvas.save();
-//        if (cell.isTouched){
-//            paintText.setColor();
-//            canvas.drawRect(cell.startX, cell.startY,cell.endX,cell.endY,paintText);
-//        }
-
-        canvas.clipRect(columnPref.startX, 0, columnPref.startX + columnPref.width, heightColumns - 1);
-
-        float sizeTextTemp = columnPref.getTextSizeTitle() * scaleDp + 0.5F;
-
-        textPaint.setColor(columnPref.getTextColorTitle());
-        textPaint.setTextSize(sizeTextTemp);
-        textPaint.setTypeface(StaticMetods.setTypeFace(columnPref.getTextStyleTitle()));
-
-        int xPos = (int) columnPref.startX + 4;
-        int yPos = (int) columnPref.startY + 4;
-
-        String textCell = columnPref.getName();
-
-//        if (cell.type == 2) {
-//            textCell = StaticMetods.getDateOfMillis(cell.date);
-//        }
-
-        StaticLayout staticLayout = new StaticLayout(textCell, textPaint, columnPref.getWidthColumn() - 8, Layout.Alignment.ALIGN_CENTER, 1, -3, false);
-
-        float height = staticLayout.getHeight();
-        if (height < columnPref.height) { // если высота текста меньше чем высота ячейки
-            yPos = (int) (yPos + (columnPref.height / 2) - height / 2) - 4; // рассчет середины для позиции y
-        }
-        canvas.translate(xPos, yPos);
-        staticLayout.draw(canvas);
-
-        canvas.restore();
-
-    }
-
-    public void init(TableModel tableModel) {
-        heightColumns = getMaxHeight(tableModel);
-        int startX;
-        int endX = 0;
-
-        for (int i = 0; i < tableModel.getColumnsPref().size(); i++) {
-            ColumnPref columnPref = tableModel.getColumnsPref().get(i);
-            endX += columnPref.getWidthColumn();
-            startX = endX - columnPref.getWidthColumn();
-            columnPref.setBounds(startX, endX, 0, heightColumns);
-        }
-    }
-
-    private int getMaxHeight(TableModel tableModel) {
-        float height = 0;
-        TextPaint textPaint = new TextPaint();
-
-        for (ColumnPref columnPref : tableModel.getColumnsPref()) {
-            textPaint.setTextSize(columnPref.getTextSizeTitle() * scaleDp + 0.5F);
-            textPaint.setTypeface(StaticMetods.setTypeFace(columnPref.getTextStyleTitle()));
-            StaticLayout staticLayout = new StaticLayout(columnPref.getName(), textPaint, columnPref.getWidthColumn() - 8, Layout.Alignment.ALIGN_CENTER, 1, -3, false);
-
-            float temp = staticLayout.getHeight();
-
-            if (height < temp) {
-                height = temp;
-            }
-        }
-//        height += 8;// для отступов сверху и снизу
-        if (height + 4 < 28 * scaleDp)
-            height = (int) (28 * scaleDp); //  если высота слишком маленькая то 28 дп
-        return (int) height + 8;
-    }
-
-    public void unSelectAll(TableModel tableModel) {
-        ArrayList<ColumnPref> columnsPref = tableModel.getColumnsPref();
-        for (int i = 0; i < columnsPref.size(); i++) {
-            ColumnPref column = columnsPref.get(i);
-            if (column.isTouched) {
-                selectColumn(i, tableModel);
-            }
-        }
-    }
-
-    public void selectColumn(int index, TableModel tableModel) {
-        ColumnPref columnPref = tableModel.getColumnsPref().get(index);
-
-        if (columnPref.isTouched) {
-            selectColumnCount--;
-            columnPref.isTouched = false;
-
-        } else {
-            selectColumnCount++;
-            columnPref.isTouched = true;
-        }
-
-        // выделяем ячейки в этой колоне ну или снимаем, смотря что там у колоны
-        for (ArrayList<Cell> cellsInColumn : tableModel.getEntries()) {
-            cellsInColumn.get(index).isTouchedStrCol = columnPref.isTouched;
-        }
-
-        if (selectColumnCount == 1) {
-            for (int i = 0; i < tableModel.getColumnsPref().size(); i++) {
-                ColumnPref col = tableModel.getColumnsPref().get(i);
-                if (col.isTouched) {
-                    oldIndex = i;
-                    oldName = col.getName();
+            for (int j = 0; j < strokeSize; j++) {
+                boolean isTouched = tableModel.getHeaders().get(j).getCell(i).isTouch;
+                if (isTouched) {
+                    canvas.drawRect(colStartX + offX + 1, coordinateStartY,
+                            colEndX + offX, coordinateStartY + heightColumns,
+                            paintSelectStrokeAColumnGray);
+                    break;
                 }
             }
+            boolean isTouched = column.isTouch;
+            if (isTouched) {
+                // если выделили
+                canvas.drawRect(colStartX + offX + 1, coordinateStartY,
+                        colEndX + offX, coordinateStartY + heightColumns,
+                        paintTouch);
+            }
+//            canvas.drawLine(column.endX, 0, column.endX, heightColumns, paintLine);
+            drawText(canvas, column, coordinateDraw, offX);
         }
-        if (selectColumnCount != 1) {
-            renameColumnListener.renameColumn(oldName, tableModel.getColumnsPref().get(oldIndex).getName(), oldIndex);
-        }
+        // колона нумерации
+        canvas.drawRect(coordinateStartX, coordinateStartY,
+                coordinateStartX + offX, coordinateStartY + heightColumns,
+                paintNumberColumn);
+
     }
 
-    public ColumnPref getSelectColumn(TableModel tableModel) {
-        for (ColumnPref col : tableModel.getColumnsPref()) {
-            if (col.isTouched) {
+    private void drawText(Canvas canvas, Column column, Coordinate coordinateDraw, int offX) {
+
+        int sX = (int) (column.startX + offX);
+
+        int eX = (int) (column.endX + offX);
+        int eY = (int) (column.endY + coordinateDraw.startY);
+
+        column.drawText(canvas, sX, eX, (int) coordinateDraw.startY, eY);
+    }
+
+
+    public void unSelectAll(TableModel tableModel) {
+        ArrayList<Column> columnsPref = tableModel.getColumns();
+        for (int i = 0; i < columnsPref.size(); i++) {
+            Column column = columnsPref.get(i);
+            if (column.isTouch) {
+                column.unSelect(tableModel);
+            }
+        }
+        selectColumnCount = 0;
+    }
+
+    @Override
+    public Coordinate getSelectedCellCoordinate(TableModel tableModel) {
+        int widthHeaders = tableModel.widthHeaders;
+        Coordinate coordinate = new Coordinate();
+        coordinate.startX = tableModel.widthTable + tableModel.widthHeaders;
+        coordinate.endX = 0;
+        coordinate.startY = tableModel.heightColumns;
+        coordinate.endY = 0;
+
+        for (Column column: tableModel.getColumns()) {
+            if (column.isTouch){
+                if (coordinate.startX > column.startX + widthHeaders)
+                    coordinate.startX = column.startX + widthHeaders;
+                if (coordinate.endX < column.endX + widthHeaders)
+                    coordinate.endX = column.endX + widthHeaders;
+            }
+        }
+        return coordinate;
+    }
+
+    @Override
+    public Coordinate selectCellsOfSelector(float startX, float endX, float startY, float endY, TableModel tableModel) {
+        unSelectAll(tableModel);
+        selectedCellCoordinate.setBounds(endX, startX, endY, startY);
+
+        for (int i = 0; i < tableModel.getColumns().size(); i++) {
+            Column column = tableModel.getColumns().get(i);
+
+            int columnStart = (int) column.startX + tableModel.widthHeaders;
+            int columnEnd = (int) column.endX + tableModel.widthHeaders;
+
+            if (columnStart < endX && columnEnd > startX) {
+                if (selectedCellCoordinate.startX > columnStart)
+                    selectedCellCoordinate.startX = columnStart;
+                if (selectedCellCoordinate.endX < columnEnd)
+                    selectedCellCoordinate.endX = columnEnd;
+                column.select(tableModel);
+                selectColumnCount ++;
+            }
+        }
+        if (selectColumnCount == 1) {
+            for (int i = 0; i < tableModel.getColumns().size(); i++) {
+                Column col = tableModel.getColumns().get(i);
+                if (col.isTouch) {
+                    oldIndexColumn = i;
+                    oldNameColumn = col.text;
+                    break;
+                }
+            }
+        } else
+            renameColumnListener.renameColumn(oldNameColumn, tableModel.getColumns().get(oldIndexColumn).text, oldIndexColumn);
+
+        return selectedCellCoordinate;
+    }
+
+    public boolean selectColumn(float x, TableModel tableModel) {
+        int index = 0;
+        for (int i = 0; i < tableModel.getColumns().size(); i++) {
+            Column column = tableModel.getColumns().get(i);
+            if (x - tableModel.widthHeaders <= column.endX) {
+                index = i;
+                break;
+            }
+        }
+        Column column = tableModel.getColumns().get(index);
+        if (column.isTouch) {
+            return false;
+        } else {
+            unSelectAll(tableModel);
+            column.select(tableModel);
+            oldIndexColumn = index;
+            oldNameColumn = column.text;
+            selectColumnCount ++;
+        }
+        return true;
+    }
+
+    public Column getSelectColumn(TableModel tableModel) {
+        for (Column col : tableModel.getColumns()) {
+            if (col.isTouch) {
                 return col;
             }
         }
@@ -182,18 +193,18 @@ public class ColumnBuilder {
     }
 
     public void deleteSelectedColumn(TableModel tableModel) {
-        if (tableModel.getColumnsPref().size() <= selectColumnCount)
+        if (tableModel.getColumns().size() <= selectColumnCount)
             return;
-        for (int i = 0; i < tableModel.getColumnsPref().size(); i++) {
-            if (tableModel.getColumnsPref().get(i).isTouched) {
-                tableModel.getColumnsPref().remove(i);
+        for (int i = 0; i < tableModel.getColumns().size(); i++) {
+            if (tableModel.getColumns().get(i).isTouch) {
+                tableModel.getColumns().remove(i);
                 i--;
             }
         }
-        for (ArrayList<Cell> stroke : tableModel.getEntries()) {
-            for (int i = 0; i < stroke.size(); i++) {
-                if (stroke.get(i).isTouchedStrCol) {
-                    stroke.remove(i);
+        for (Header header : tableModel.getHeaders()) {
+            for (int i = 0; i < header.getCells().size(); i++) {
+                if (header.getCell(i).isTouch) {
+                    header.getCells().remove(i);
                     i--;
                 }
             }

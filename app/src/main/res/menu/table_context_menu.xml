@@ -5,7 +5,7 @@
         android:id="@+id/rename"
         android:title="@string/rename"/>
     <item
-        android:id="@+id/send"
+        android:id="@+id/save"
         android:title="@string/send"/>
     <item
         android:id="@+id/delete"

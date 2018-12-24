@@ -2,20 +2,25 @@ package ru.developer.press.mytable.interfaces;
 
 import android.graphics.Canvas;
 
-import ru.developer.press.mytable.model.CellAbstract;
+import ru.developer.press.mytable.helpers.Coordinate;
 
 public interface TableViewListener {
-    void cellClick(float x, float y);
 
-    void drawCells(Canvas canvas, CellAbstract coordinate);
+    void draw(Canvas canvas, Coordinate coordinate);
 
-    void scrollBy(int x, int y);
+    void scrollBy(float distanceX, float distanceY);
 
     void scrollTo(int x, int y);
+
+    boolean touchCoordinate(float x, float y);
+
+    void eventUp();
+
+    void click(float v, float v1, Coordinate coordinate);
+
+    void moveSelector(float x, float y, Coordinate coordinate);
 
     int getTableWidth();
 
     int getTableHeight();
-
-
 }

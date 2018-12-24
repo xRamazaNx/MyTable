@@ -10,7 +10,7 @@ import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AlertDialog;
 import android.widget.EditText;
 import ru.developer.press.myTable.R;
-import ru.developer.press.mytable.StaticMetods;
+import ru.developer.press.mytable.helpers.StaticMethods;
 
 
 @SuppressLint("ValidFragment")
@@ -35,7 +35,7 @@ public class DialogNameTable extends DialogFragment {
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         editText = new EditText(getContext());
         editText.setText(nameTable);
-        int padding = StaticMetods.convertDpToPixels(16, getContext());
+        int padding = StaticMethods.convertDpToPixels(16, getContext());
         editText.setPadding(padding,padding/2,padding,padding/2);
         editText.setSelection(nameTable.length());
 //        editText.getRootView().setPadding(40, 0, 40,0);

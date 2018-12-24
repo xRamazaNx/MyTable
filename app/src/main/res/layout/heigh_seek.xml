@@ -13,7 +13,7 @@
         app:cardElevation="7dp"
         app:cardUseCompatPadding="true">
 
-        <ru.developer.press.mytable.views.VerticalSeekBar
+        <ru.developer.press.mytable.table.views.VerticalSeekBar
             android:id="@+id/seekBar_height_cell"
             android:layout_width="36dp"
             android:layout_height="200dp"

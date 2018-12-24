@@ -13,7 +13,7 @@
         android:title="@string/rename"
         app:showAsAction="always"/>
     <item
-        android:id="@+id/setting_column"
+        android:id="@+id/pref_cells"
         android:icon="@drawable/format_column"
         android:title="@string/add"
         app:showAsAction="always"/>

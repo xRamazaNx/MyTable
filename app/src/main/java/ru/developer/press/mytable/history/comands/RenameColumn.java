@@ -1,13 +1,13 @@
 package ru.developer.press.mytable.history.comands;
 
 import ru.developer.press.mytable.history.Command;
-import ru.developer.press.mytable.model.TableModel;
+import ru.developer.press.mytable.table.model.TableModel;
 
 public class RenameColumn extends Command {
     private String oldNameColumn;
     private String newNameColumn;
 //    private String nameID;
-    private int index;
+    public int index;
 
 //    public String getNameID() {
 //        return nameID;
@@ -26,21 +26,18 @@ public class RenameColumn extends Command {
 
     @Override
     public void undo(TableModel tableModel) {
-        tableModel.getColumnsPref().get(index).setName(oldNameColumn);
-        historyUpdateListener.undo(index);
+        tableModel.getColumns().get(index).text = oldNameColumn;
+        historyUpdateListener.undo(this);
     }
 
     @Override
     public void redo(TableModel tableModel) {
-        tableModel.getColumnsPref().get(index).setName(newNameColumn);
-        historyUpdateListener.redo(index);    }
+        tableModel.getColumns().get(index).text = newNameColumn;
+        historyUpdateListener.redo(this);    }
 
     @Override
     public String description(String description) {
         return null;
     }
 
-    public int getIndex() {
-        return index;
-    }
 }

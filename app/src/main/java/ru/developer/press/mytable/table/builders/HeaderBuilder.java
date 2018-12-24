@@ -3,142 +3,154 @@ package ru.developer.press.mytable.table.builders;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.support.v4.content.ContextCompat;
-import android.text.Layout;
-import android.text.StaticLayout;
-import android.text.TextPaint;
 
 import java.util.ArrayList;
 
-import ru.developer.press.myTable.R;
-import ru.developer.press.mytable.StaticMetods;
-import ru.developer.press.mytable.model.Cell;
-import ru.developer.press.mytable.model.CellAbstract;
-import ru.developer.press.mytable.model.TableModel;
+import ru.developer.press.mytable.helpers.Coordinate;
+import ru.developer.press.mytable.table.model.Cell;
+import ru.developer.press.mytable.table.model.Header;
+import ru.developer.press.mytable.table.model.TableModel;
 
-public class HeaderBuilder {
-    private final Paint paintTouchCell;
-    private final Paint paintLine;
-    private final TextPaint textPaint;
-    private float widthMap;
+public class HeaderBuilder extends Builder {
     public int selectHeaderCount = 0;
+    private int index;
 
     public HeaderBuilder(Context context) {
-        float sizeTextTemp = StaticMetods.convertSpToPixels(14, context);
-        paintLine = new Paint();
-        paintLine.setColor(context.getResources().getColor(R.color.gray));
+        super(context);
 
-        paintTouchCell = new Paint();
-        paintTouchCell.setColor(context.getResources().getColor(R.color.color_select_stroke_column));
-
-        textPaint = new TextPaint();
-        textPaint.setColor(ContextCompat.getColor(context, R.color.gray));
-//        textPaint.setColor(Color.parseColor(cell.colorFont));
-        textPaint.setTextSize(sizeTextTemp);
-        textPaint.setAntiAlias(true);
-//        textPaint.setTypeface(setTypeFace(cell.styleFont));
-
-        widthMap = StaticMetods.convertDpToPixels(32, context);
     }
 
-    public void init(TableModel tableModel) {
-        ArrayList<Integer> index = new ArrayList<>();
-        ArrayList<Cell> headers = tableModel.getHeaders();
-        for (int i = 0; i < headers.size(); i++) {
-            if (headers.get(i).isTouched)
-                index.add(i);
-        }
-        headers.clear();
-        int endY = 0;
-        int startY;
-        for (int i = 0; i < tableModel.getEntries().size(); i++) {
-            int heightStroke = (int) tableModel.getEntries().get(i).get(0).height;
-            endY += heightStroke;
-            startY = endY - heightStroke;
+    public boolean selectHeader(int index, TableModel tableModel) {
+        Header header = tableModel.getHeaders().get(index);
 
-            Cell cell = new Cell();
-            cell.text = String.valueOf(i + 1);
-            cell.setBounds(0, widthMap, startY, endY);
-            headers.add(cell);
+        if (header.isTouch)
+            return false;
+        else{
+            unSelectAll(tableModel);
+            header.select();
+            selectHeaderCount ++;
         }
-        for (int in : index) {
-            headers.get(in).isTouched = true;
-        }
+        return true;
     }
 
-    public void selectHeader(int index, TableModel tableModel) {
-        Cell header = tableModel.getHeaders().get(index);
-        if (header.isTouched) {
-            header.isTouched = false;
-            selectHeaderCount--;
-        } else {
-            selectHeaderCount++;
-            header.isTouched = true;
-        }
 
-        // выделяем ячейки в этой строке или наоборот
-        for (Cell cellIsInHeader : tableModel.getEntries().get(index)) {
-            cellIsInHeader.isTouchedStrCol = header.isTouched;
-        }
-    }
+    public void draw(Canvas canvas, Coordinate coordinateDraw, TableModel tableModel) {
+                    Paint paintSelectStrokeAColumnGray = this.paintSelectStrokeAColumnGray;
+        int offY = tableModel.heightColumns;
+        int coorStartX = (int) coordinateDraw.startX;
+        float coordinateStartY = coordinateDraw.startY;
+        float coordinateEndY = coordinateDraw.endY;
 
-    public void drawHeaders(Canvas canvas, CellAbstract coordinateDraw, TableModel tableModel) {
-        for (Cell header : tableModel.getHeaders()) {
-            if (header.endY < coordinateDraw.startY || header.startY > coordinateDraw.endY)
+        ArrayList<Header> headers = tableModel.getHeaders();
+        int size = headers.size();
+        for (int i = 0; i < size; i++) {
+            Header header = headers.get(i);
+
+            float startY = header.startY;
+            float endY = header.endY;
+
+            if (endY < coordinateStartY || startY > coordinateEndY)
                 continue;
-            canvas.save();
 
-            if (header.isTouched) {
-                canvas.drawRect(header.startX, header.startY + 1, header.endX, header.endY, paintTouchCell);
+            float endX = header.endX;
+
+            Paint paintBack = header.paintBack;
+            canvas.drawRect(coorStartX, startY + 1 + offY, endX + coorStartX, endY + offY, paintBack);
+            // рисуем сырми хеадер если в его диапозоне есть выделенная ячейка
+            ArrayList<Cell> cells = tableModel.getHeaders().get(i).getCells();
+            for (Cell cell : cells) {
+                boolean isTouched = cell.isTouch;
+                if (isTouched) {
+                    canvas.drawRect(coorStartX, startY + 1 + offY, endX + coorStartX, endY + offY, paintSelectStrokeAColumnGray);
+                    break;
+                }
             }
-            drawText(canvas, header);
-            canvas.restore();
 
-            canvas.drawLine(0, header.endY, widthMap, header.endY, paintLine);
+            boolean isTouched = header.isTouch;
+            if (isTouched) {
+                canvas.drawRect(coorStartX, startY + 1 + offY, endX + coorStartX, endY + offY, paintTouch);
+            }
+
+            canvas.save();
+            drawText(canvas, header, offY, coorStartX);
+            canvas.restore();
         }
     }
 
-    private void drawText(Canvas canvas, Cell cell) {
-        canvas.clipRect(cell.startX, cell.startY, cell.startX + cell.width, cell.startY + cell.height - 2);
+    private void drawText(Canvas canvas, Header header, int offY, int coorStartX) {
+        int sY = (int) (header.startY + offY);
+        int eX = (int) (header.endX + coorStartX);
+        int eY = (int) (header.endY + offY);
 
-        int xPos = (int) cell.startX + 2;
-        int yPos = (int) cell.startY + 2;
-
-        StaticLayout staticLayout = new StaticLayout(cell.text, textPaint, (int) cell.width - 4, Layout.Alignment.ALIGN_CENTER, 1, 0, false);
-
-        float height = staticLayout.getHeight();
-        if (height < cell.height) { // если высота текста меньше чем высота ячейки
-            yPos = (int) (yPos + (cell.height / 2) - height / 2) - 2; // рассчет середины для позиции y
-        }
-
-        canvas.translate(xPos, yPos);
-        staticLayout.draw(canvas);
-
+        header.drawText(canvas, coorStartX,eX,sY,eY);
     }
 
     public void unSelectAll(TableModel tableModel) {
-        ArrayList<Cell> headers = tableModel.getHeaders();
+        ArrayList<Header> headers = tableModel.getHeaders();
         for (int i = 0; i < headers.size(); i++) {
-            Cell header = headers.get(i);
-            if (header.isTouched) {
-                selectHeader(i, tableModel);
+            Header header = headers.get(i);
+            if (header.isTouch) {
+                header.unSelect();
             }
 
         }
+        selectHeaderCount = 0;
     }
+
+    @Override
+    public Coordinate getSelectedCellCoordinate(TableModel tableModel) {
+        int heightColumns = tableModel.heightColumns;
+        Coordinate coordinate = new Coordinate();
+        coordinate.startX = 0;
+        coordinate.endX = tableModel.widthTable + tableModel.widthHeaders;
+        coordinate.startY = tableModel.heightTable + heightColumns;
+        coordinate.endY = 0;
+        for (Header header: tableModel.getHeaders()) {
+            if (header.isTouch){
+                if (coordinate.startY > header.startY + heightColumns)
+                    coordinate.startY = header.startY + heightColumns;
+                if (coordinate.endY < header.endY + heightColumns)
+                    coordinate.endY = header.endY + heightColumns;
+            }
+        }
+        return coordinate;
+    }
+
+    @Override
+    public Coordinate selectCellsOfSelector(float startX, float endX, float startY, float endY, TableModel tableModel) {
+        unSelectAll(tableModel);
+        selectedCellCoordinate.setBounds(endX, startX, endY, startY);
+
+        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
+            Header header = tableModel.getHeaders().get(i);
+
+            int strokeStart = (int) header.startY + tableModel.heightColumns;
+            int strokeEnd = (int) header.endY + tableModel.heightColumns;
+            if (strokeStart < endY && strokeEnd > startY) {
+                if (selectedCellCoordinate.startY > strokeStart)
+                    selectedCellCoordinate.startY = strokeStart;
+                if (selectedCellCoordinate.endY < strokeEnd)
+                    selectedCellCoordinate.endY = strokeEnd;
+                header.select();
+                selectHeaderCount++;
+            }
+        }
+        return selectedCellCoordinate;
+    }
+
 
     public void deleteHeaders(TableModel tableModel) {
         if (selectHeaderCount >= tableModel.getHeaders().size()) {
             return;
         }
-        for (int i = 0; i < tableModel.getEntries().size(); i++) {
-            if (tableModel.getHeaders().get(i).isTouched) {
-                tableModel.getHeaders().remove(i);
-                tableModel.getEntries().remove(i);
+        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
+            if (tableModel.getHeaders().get(i).isTouch) {
+                tableModel.deleteStroke(i);
                 i--;
             }
         }
         selectHeaderCount = 0;
 
     }
+
 }

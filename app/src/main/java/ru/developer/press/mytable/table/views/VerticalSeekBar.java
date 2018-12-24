@@ -1,4 +1,4 @@
-package ru.developer.press.mytable.views;
+package ru.developer.press.mytable.table.views;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -35,7 +35,7 @@ public class VerticalSeekBar extends android.support.v7.widget.AppCompatSeekBar 
      * Standard constructor to be implemented for all views.
      *
      * @param context The Context the view is running in, through which it can access the current theme, resources, etc.
-     * @param attrs   The attributes of the XML tag that is inflating the view.
+     * @param attrs   The attributes of the JSON tag that is inflating the view.
      * @see android.view.View#View(Context, AttributeSet)
      */
     public VerticalSeekBar(final Context context, final AttributeSet attrs) {
@@ -46,7 +46,7 @@ public class VerticalSeekBar extends android.support.v7.widget.AppCompatSeekBar 
      * Standard constructor to be implemented for all views.
      *
      * @param context  The Context the view is running in, through which it can access the current theme, resources, etc.
-     * @param attrs    The attributes of the XML tag that is inflating the view.
+     * @param attrs    The attributes of the JSON tag that is inflating the view.
      * @param defStyle An attribute in the current theme that contains a reference to a style resource that supplies default
      *                 values for the view. Can be 0 to not look for defaults.
      * @see android.view.View#View(Context, AttributeSet, int)

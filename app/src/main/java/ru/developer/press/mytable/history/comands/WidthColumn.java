@@ -3,8 +3,8 @@ package ru.developer.press.mytable.history.comands;
 import java.util.ArrayList;
 
 import ru.developer.press.mytable.history.Command;
-import ru.developer.press.mytable.model.ColumnPref;
-import ru.developer.press.mytable.model.TableModel;
+import ru.developer.press.mytable.table.model.Column;
+import ru.developer.press.mytable.table.model.TableModel;
 
 public class WidthColumn extends Command {
 
@@ -21,18 +21,18 @@ public class WidthColumn extends Command {
 
     @Override
     public void undo(TableModel tableModel) {
-        for (int i = 0; i < tableModel.getColumnsPref().size(); i++) {
-            tableModel.getColumnsPref().get(i).setWidthColumn(oldWidths[i]);
+        for (int i = 0; i < tableModel.getColumns().size(); i++) {
+            tableModel.getColumns().get(i).width = oldWidths[i];
         }
-        historyUpdateListener.undo(null);
+        historyUpdateListener.undo(this);
     }
 
     @Override
     public void redo(TableModel tableModel) {
-        for (int i = 0; i < tableModel.getColumnsPref().size(); i++) {
-            tableModel.getColumnsPref().get(i).setWidthColumn(newWidths[i]);
+        for (int i = 0; i < tableModel.getColumns().size(); i++) {
+            tableModel.getColumns().get(i).width = newWidths[i];
         }
-        historyUpdateListener.redo(null);
+        historyUpdateListener.redo(this);
     }
 
     @Override
@@ -42,9 +42,9 @@ public class WidthColumn extends Command {
 
     public ArrayList<Integer> getCurrentWidth(TableModel tableModel) {
         ArrayList<Integer> width = new ArrayList<>();
-        for (ColumnPref col :
-                tableModel.getColumnsPref()) {
-            width.add(col.getWidthColumn());
+        for (Column col :
+                tableModel.getColumns()) {
+            width.add((int) col.width);
         }
         return width;
     }

@@ -121,55 +121,17 @@
     </android.support.v7.widget.Toolbar>
 
 
-    <ru.developer.press.mytable.table.ColumnView
-        android:id="@+id/column_view"
-        android:layout_width="match_parent"
-        android:layout_height="32dp"
-        android:layout_below="@+id/toolbar_table"
-        android:layout_toStartOf="@+id/vertical_in_menu"
-        android:layout_toLeftOf="@+id/vertical_in_menu"
-        android:layout_toEndOf="@+id/vertical_line"
-        android:layout_toRightOf="@+id/vertical_line">
-
-    </ru.developer.press.mytable.table.ColumnView>
-
-    <FrameLayout
-        android:id="@+id/frame_headers"
-        android:layout_width="32dp"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/container_editCell"
-        android:layout_below="@+id/column_view"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentLeft="true"
-        android:background="@color/gray_light"
-        android:gravity="center_horizontal"
-        android:minWidth="16dp"
-        >
-
-        <ru.developer.press.mytable.table.HeaderView
-            android:id="@+id/header_view"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-
-            >
-
-        </ru.developer.press.mytable.table.HeaderView>
-
-    </FrameLayout>
-
     <FrameLayout
         android:id="@+id/frameLayout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_above="@+id/container_editCell"
-        android:layout_below="@+id/column_view"
+        android:layout_below="@+id/toolbar_table"
         android:layout_toStartOf="@+id/vertical_in_menu"
         android:layout_toLeftOf="@+id/vertical_in_menu"
-        android:layout_toEndOf="@+id/vertical_line"
-        android:layout_toRightOf="@+id/vertical_line"
         android:background="@android:color/white">
 
-        <ru.developer.press.mytable.table.TableView
+        <ru.developer.press.mytable.table.views.TableView
             android:id="@+id/table_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -178,32 +140,7 @@
             android:scrollbarAlwaysDrawVerticalTrack="true"
             android:scrollbars="horizontal|vertical">
 
-        </ru.developer.press.mytable.table.TableView>
-
-    </FrameLayout>
-
-    <FrameLayout
-        android:id="@+id/vertical_line"
-        android:layout_width="1px"
-        android:layout_height="match_parent"
-        android:layout_above="@+id/container_editCell"
-        android:layout_below="@+id/toolbar_table"
-        android:layout_toEndOf="@+id/frame_headers"
-        android:layout_toRightOf="@+id/frame_headers"
-        android:background="@color/gray">
-
-    </FrameLayout>
-
-    <FrameLayout
-        android:id="@+id/horizontal_line"
-        android:layout_width="match_parent"
-        android:layout_height="1px"
-        android:layout_below="@+id/column_view"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentLeft="true"
-        android:layout_toStartOf="@+id/vertical_in_menu"
-        android:layout_toLeftOf="@+id/vertical_in_menu"
-        android:background="@color/gray">
+        </ru.developer.press.mytable.table.views.TableView>
 
     </FrameLayout>
 
@@ -215,18 +152,6 @@
         android:rotation="180">
 
     </FrameLayout>
-
-    <TextView
-        android:id="@+id/number_column"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/toolbar_table"
-        android:layout_alignBottom="@+id/column_view"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentLeft="true"
-        android:gravity="center"
-        android:padding="3dp"
-        android:text="@string/n"/>
 
     <LinearLayout
         android:id="@+id/container_editCell"

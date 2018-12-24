@@ -3,41 +3,41 @@ package ru.developer.press.mytable.history.comands;
 import java.util.List;
 
 import ru.developer.press.mytable.history.Command;
-import ru.developer.press.mytable.model.Cell;
-import ru.developer.press.mytable.model.ColumnPref;
-import ru.developer.press.mytable.model.TableModel;
+import ru.developer.press.mytable.table.model.Cell;
+import ru.developer.press.mytable.table.model.Column;
+import ru.developer.press.mytable.table.model.TableModel;
 
 public class AddColumn extends Command {
 
-    private ColumnPref columnPref;
+    private Column column;
     private List <Cell> cellsofColumn;
     public int index;
 
-    public AddColumn(int index, ColumnPref columnPref, List <Cell> cellsofColumn) {
+    public AddColumn(int index, Column column, List <Cell> cellsofColumn) {
         this.cellsofColumn = cellsofColumn;
-        this.columnPref = columnPref;
+        this.column = column;
         this.index = index;
     }
 
     @Override
     public void undo(TableModel tableModel) {
-        tableModel.getColumnsPref().remove(columnPref);
-        for (int i = 0; i < tableModel.getEntries().size(); i++) {
-            tableModel.getEntries().get(i).remove(index);
+        tableModel.getColumns().remove(column);
+        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
+            tableModel.getHeaders().get(i).getCells().remove(index);
         }
-        historyUpdateListener.undo(null);
+        historyUpdateListener.undo(this);
 
     }
 
     @Override
     public void redo(TableModel tableModel) {
-        columnPref.isTouched = false;
-        tableModel.getColumnsPref().add(index, columnPref);
-        for (int i = 0; i < tableModel.getEntries().size(); i++) {
-            tableModel.getEntries().get(i).add(index, cellsofColumn.get(i));
+        column.isTouch = false;
+        tableModel.getColumns().add(index, column);
+        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
+            tableModel.getHeaders().get(i).getCells().add(index, cellsofColumn.get(i));
         }
 //        super.redo(tableModel);
-        historyUpdateListener.redo(null);
+        historyUpdateListener.redo(this);
 
     }
 

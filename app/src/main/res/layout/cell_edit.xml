@@ -47,7 +47,7 @@
         <EditText
             android:id="@+id/edit_cell_in_table"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:layout_weight="7"
             android:autofillHints=""
@@ -56,10 +56,12 @@
             android:hint="@string/enter_data"
             android:inputType="textMultiLine|textImeMultiLine"
             android:lineSpacingExtra="0sp"
+            android:maxHeight="72dp"
+            android:minHeight="48dp"
             android:paddingLeft="4dp"
-            android:paddingTop="4dp"
+            android:paddingTop="8dp"
             android:paddingRight="4dp"
-            android:paddingBottom="4dp"
+            android:paddingBottom="8dp"
             tools:targetApi="o"/>
 
         <TextView

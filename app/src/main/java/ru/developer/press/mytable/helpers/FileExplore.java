@@ -1,11 +1,9 @@
-package ru.developer.press.mytable.views;
+package ru.developer.press.mytable.helpers;
 
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
 
-import android.content.DialogInterface;
-import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.NonNull;
@@ -18,7 +16,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;

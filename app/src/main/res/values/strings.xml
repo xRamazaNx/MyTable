@@ -33,7 +33,7 @@
     <string name="new_table_">Новая таблица_</string>
     <string name="formule">Формула</string>
     <string name="title">Заголовок</string>
-    <string name="cells">Ячейки</string>
+    <string name="pref_cells">Изменять ячейки</string>
     <string name="b">B</string>
     <string name="i">I</string>
     <string name="name_table">Имя таблицы</string>
@@ -83,4 +83,6 @@
     <string name="new_name">Новое имя</string>
     <string name="fixed_height">Фиксировать высоту ячеек</string>
     <string name="send">Поделиться</string>
+    <string name="date_variable_change">Выбор отображения даты</string>
+    <string name="date_variable_setting">Настройка отображения даты</string>
 </resources>

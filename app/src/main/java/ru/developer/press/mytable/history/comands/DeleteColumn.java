@@ -4,50 +4,50 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ru.developer.press.mytable.history.Command;
-import ru.developer.press.mytable.model.Cell;
-import ru.developer.press.mytable.model.ColumnPref;
-import ru.developer.press.mytable.model.TableModel;
+import ru.developer.press.mytable.table.model.Cell;
+import ru.developer.press.mytable.table.model.Column;
+import ru.developer.press.mytable.table.model.TableModel;
 
 public class DeleteColumn extends Command {
-    private List<ColumnPref> columnPrefs;
+    private List<Column> columns;
     private ArrayList<ArrayList<Cell>> cellsOfColumns;
     public int[] index;
 
-    public DeleteColumn(int[] index, List<ColumnPref> columnPrefs, ArrayList<ArrayList<Cell>> cellsOfColumns) {
-        this.columnPrefs = columnPrefs;
+    public DeleteColumn(int[] index, List<Column> columns, ArrayList<ArrayList<Cell>> cellsOfColumns) {
+        this.columns = columns;
         this.cellsOfColumns = cellsOfColumns;
         this.index = index;
     }
 
     @Override
     public void undo(TableModel tableModel) {
-        for (ColumnPref col : columnPrefs) {
-            col.isTouched = false;
+        for (Column col : columns) {
+            col.isTouch = false;
         }
         for (int i = 0; i < index.length; i++) {
             int indexOfLocation = index[i]; // индекс куда добавлять
-            ColumnPref columnPref = columnPrefs.get(i); // столб который надо добавить
-            tableModel.getColumnsPref().add(indexOfLocation, columnPref);
+            Column column = columns.get(i); // столб который надо добавить
+            tableModel.getColumns().add(indexOfLocation, column);
 
-            for (int j = 0; j < tableModel.getEntries().size(); j++) {
+            for (int j = 0; j < tableModel.getHeaders().size(); j++) {
 
-                tableModel.getEntries().get(j).add(indexOfLocation, cellsOfColumns.get(i).get(j));
+                tableModel.getHeaders().get(j).getCells().add(indexOfLocation, cellsOfColumns.get(i).get(j));
             }
         }
-        historyUpdateListener.undo(null);
+        historyUpdateListener.undo(this);
     }
 
     @Override
     public void redo(TableModel tableModel) {
-        tableModel.getColumnsPref().removeAll(columnPrefs);
-        for (int i = 0; i < tableModel.getEntries().size(); i++) {
+        tableModel.getColumns().removeAll(columns);
+        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
             ArrayList<Cell> delCells = new ArrayList<>();
             for (int anIndex : index) {
-                delCells.add(tableModel.getEntries().get(i).get(anIndex));
+                delCells.add(tableModel.getHeaders().get(i).getCell(anIndex));
             }
-            tableModel.getEntries().get(i).removeAll(delCells);
+            tableModel.getHeaders().get(i).getCells().removeAll(delCells);
         }
-        historyUpdateListener.redo(null);
+        historyUpdateListener.redo(this);
     }
 
     @Override

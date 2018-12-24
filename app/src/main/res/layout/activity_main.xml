@@ -19,7 +19,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"/>
 
-    <ru.developer.press.mytable.views.ScrollMain
+    <ru.developer.press.mytable.ScrollMain
         android:id="@+id/scroll_view_main"
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -34,7 +34,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="8dp"/>
-    </ru.developer.press.mytable.views.ScrollMain>
+    </ru.developer.press.mytable.ScrollMain>
 
     <!--<com.google.android.gms.ads.AdView-->
         <!--xmlns:ads="http://schemas.android.com/apk/res-auto"-->
@@ -53,7 +53,7 @@
         android:id="@+id/floatingActionButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:buttonBackgroundColour="@color/gray"
+        app:buttonBackgroundColour="@color/dark_gray"
         app:buttonIcon="@drawable/ic_action_button"
         >
         <!--app:layout_constraintBottom_toTopOf="@+id/adView"-->

@@ -24,7 +24,7 @@
             </intent-filter>
         </activity>
         <activity android:name="ru.developer.press.mytable.TableActivity"/>
-        <activity android:name="ru.developer.press.mytable.views.FileExplore">
+        <activity android:name="ru.developer.press.mytable.helpers.FileExplore">
         </activity>
     </application>
 
