@@ -1,13 +1,13 @@
 package ru.developer.press.mytable.helpers;
 
 public  class Coordinate {
-    public float startX = 0;
-    public float endX = 0;
-    public float startY = 0;
-    public float endY = 0;
+    public transient float startX = 0;
+    public transient float endX = 0;
+    public transient float startY = 0;
+    public transient float endY = 0;
 
-    public float width = 0;
-    public float height = 0;
+    public transient float width = 0;
+    public transient float height = 0;
 
 
     public void setBounds(float startX, float endX, float startY, float endY) {

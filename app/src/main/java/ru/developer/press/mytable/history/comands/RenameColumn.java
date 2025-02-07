@@ -1,7 +1,7 @@
 package ru.developer.press.mytable.history.comands;
 
 import ru.developer.press.mytable.history.Command;
-import ru.developer.press.mytable.table.model.TableModel;
+import ru.developer.press.mytable.model.TableModel;
 
 public class RenameColumn extends Command {
     private String oldNameColumn;

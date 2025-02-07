@@ -29,11 +29,11 @@
     <string name="italic_bold_style">Жирный/курсив</string>
     <string name="setting_column">Настройка столбца</string>
     <string name="enter_data">Введите данные</string>
-    <string name="column">cтолбец</string>
+    <string name="column">столбец</string>
     <string name="new_table_">Новая таблица_</string>
-    <string name="formule">Формула</string>
+    <string name="formula">Формула</string>
     <string name="title">Заголовок</string>
-    <string name="pref_cells">Изменять ячейки</string>
+    <string name="is_pref_cells">Применять к ячейкам</string>
     <string name="b">B</string>
     <string name="i">I</string>
     <string name="name_table">Имя таблицы</string>
@@ -66,6 +66,34 @@
         <item>28</item>
     </string-array>
 
+    <string-array name="padding_array">
+        <item>2</item>
+        <item>4</item>
+        <item>6</item>
+        <item>8</item>
+        <item>10</item>
+        <item>12</item>
+        <item>14</item>
+        <item>16</item>
+        <item>18</item>
+        <item>20</item>
+        <item>22</item>
+        <item>24</item>
+        <item>26</item>
+        <item>28</item>
+        <item>30</item>
+        <item>32</item>
+        <item>34</item>
+        <item>36</item>
+        <item>38</item>
+        <item>40</item>
+        <item>42</item>
+        <item>44</item>
+        <item>46</item>
+        <item>48</item>
+        <item>50</item>
+    </string-array>
+
     <string-array name="style_text_array">
         <item>Обычный</item>
         <item>Жирный</item>
@@ -85,4 +113,24 @@
     <string name="send">Поделиться</string>
     <string name="date_variable_change">Выбор отображения даты</string>
     <string name="date_variable_setting">Настройка отображения даты</string>
+    <string name="padding_left">Отступ слева</string>
+    <string name="padding_right">Отступ справа</string>
+    <string name="padding_up">Отступ сверху</string>
+    <string name="padding_down">Отступ снизу</string>
+    <string name="paddings">Отступы</string>
+    <string name="in_left">Слева</string>
+    <string name="in_right">Справа</string>
+    <string name="in_up">Сверху</string>
+    <string name="in_down">Снизу</string>
+    <string name="function_setting">Настройка формулы</string>
+    <string name="setting_formula">Настройка формулы</string>
+    <string name="custom_value">Свое значение</string>
+    <string name="find_circular_dependency">Обнаружена циклическая зависимость!</string>
+    <string name="formula_not_valid">Не правильная формула!</string>
+    <string name="always_fit_to_screen">Всегда по ширине экрана</string>
+    <string name="excel">excel</string>
+    <string name="pic">картинка</string>
+    <string name="change_format">Выберите формат</string>
+    <string name="export">Экспорт</string>
+    <string name="show_total_amount">Строка с общей суммой ячеек</string>
 </resources>

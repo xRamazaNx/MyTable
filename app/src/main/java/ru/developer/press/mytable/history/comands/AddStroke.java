@@ -1,25 +1,22 @@
 package ru.developer.press.mytable.history.comands;
 
-import java.util.ArrayList;
-
 import ru.developer.press.mytable.history.Command;
-import ru.developer.press.mytable.table.model.Cell;
-import ru.developer.press.mytable.table.model.Header;
-import ru.developer.press.mytable.table.model.TableModel;
+import ru.developer.press.mytable.model.Row;
+import ru.developer.press.mytable.model.TableModel;
 
 public class AddStroke extends Command {
 
-    private Header headerPref;
+    private Row rowPref;
     public int index;
 
-    public AddStroke(int index, Header headerPref) {
-        this.headerPref = headerPref;
+    public AddStroke(int index, Row rowPref) {
+        this.rowPref = rowPref;
         this.index = index;
     }
 
     @Override
     public void undo(TableModel tableModel) {
-        tableModel.getHeaders().remove(headerPref);
+        tableModel.getRows().remove(rowPref);
 //        super.undo(tableModel);
         historyUpdateListener.undo(this);
     }
@@ -29,7 +26,7 @@ public class AddStroke extends Command {
 //        for (Cell cell : stroke) {
 //            cell.isTouchedStrCol = false;
 //        }
-        tableModel.getHeaders().add(index, headerPref);
+        tableModel.getRows().add(index, rowPref);
 //        super.redo(tableModel);
         historyUpdateListener.redo(this);
     }

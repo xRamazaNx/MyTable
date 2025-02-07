@@ -2,14 +2,14 @@ package ru.developer.press.mytable.table.views;
 
 import android.content.Context;
 import android.graphics.Canvas;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 
 /**
  * Implementation of an easy vertical SeekBar, based on the normal SeekBar.
  */
-public class VerticalSeekBar extends android.support.v7.widget.AppCompatSeekBar {
+public class VerticalSeekBar extends androidx.appcompat.widget.AppCompatSeekBar {
     /**
      * The angle by which the SeekBar view should be rotated.
      */

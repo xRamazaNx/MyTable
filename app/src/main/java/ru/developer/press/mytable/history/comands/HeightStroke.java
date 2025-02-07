@@ -1,7 +1,7 @@
 package ru.developer.press.mytable.history.comands;
 
 import ru.developer.press.mytable.history.Command;
-import ru.developer.press.mytable.table.model.TableModel;
+import ru.developer.press.mytable.model.TableModel;
 
 public class HeightStroke extends Command {
     private int [] oldHeight;
@@ -14,16 +14,16 @@ public class HeightStroke extends Command {
 
     @Override
     public void undo(TableModel tableModel) {
-        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
-            tableModel.getHeaders().get(i).height = oldHeight[i];
+        for (int i = 0; i < tableModel.getRows().size(); i++) {
+            tableModel.getRows().get(i).height = oldHeight[i];
         }
         historyUpdateListener.undo(this);
     }
 
     @Override
     public void redo(TableModel tableModel) {
-        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
-            tableModel.getHeaders().get(i).height = newHeight[i];
+        for (int i = 0; i < tableModel.getRows().size(); i++) {
+            tableModel.getRows().get(i).height = newHeight[i];
         }
         historyUpdateListener.redo(this);
     }

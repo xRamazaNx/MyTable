@@ -3,8 +3,8 @@ package ru.developer.press.mytable.history.comands;
 import java.util.ArrayList;
 
 import ru.developer.press.mytable.history.Command;
-import ru.developer.press.mytable.table.model.Column;
-import ru.developer.press.mytable.table.model.TableModel;
+import ru.developer.press.mytable.model.Column;
+import ru.developer.press.mytable.model.TableModel;
 
 public class WidthColumn extends Command {
 
@@ -22,7 +22,7 @@ public class WidthColumn extends Command {
     @Override
     public void undo(TableModel tableModel) {
         for (int i = 0; i < tableModel.getColumns().size(); i++) {
-            tableModel.getColumns().get(i).width = oldWidths[i];
+            tableModel.getColumns().get(i).setWidth(oldWidths[i]);
         }
         historyUpdateListener.undo(this);
     }
@@ -30,7 +30,7 @@ public class WidthColumn extends Command {
     @Override
     public void redo(TableModel tableModel) {
         for (int i = 0; i < tableModel.getColumns().size(); i++) {
-            tableModel.getColumns().get(i).width = newWidths[i];
+            tableModel.getColumns().get(i).setWidth(newWidths[i]);
         }
         historyUpdateListener.redo(this);
     }
@@ -44,7 +44,7 @@ public class WidthColumn extends Command {
         ArrayList<Integer> width = new ArrayList<>();
         for (Column col :
                 tableModel.getColumns()) {
-            width.add((int) col.width);
+            width.add((int) col.getWidth());
         }
         return width;
     }

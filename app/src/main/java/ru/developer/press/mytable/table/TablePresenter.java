@@ -1,16 +1,28 @@
 package ru.developer.press.mytable.table;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.view.View;
 
 import com.google.android.gms.common.util.ArrayUtils;
 
+import org.apache.poi.ss.usermodel.Workbook;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import ru.developer.press.mytable.dialogs.DialogNameTable;
 import ru.developer.press.mytable.helpers.BottomMenuControl;
+import ru.developer.press.mytable.helpers.ColumnAttribute;
 import ru.developer.press.mytable.helpers.Coordinate;
+import ru.developer.press.mytable.helpers.Formula;
+import ru.developer.press.mytable.helpers.StaticMethods;
+import ru.developer.press.mytable.helpers.TableFileHelper;
 import ru.developer.press.mytable.helpers.TableLab;
 import ru.developer.press.mytable.history.Command;
 import ru.developer.press.mytable.history.HistoryManager;
@@ -23,82 +35,76 @@ import ru.developer.press.mytable.history.comands.EditPrefs;
 import ru.developer.press.mytable.history.comands.HeightStroke;
 import ru.developer.press.mytable.history.comands.RenameColumn;
 import ru.developer.press.mytable.history.comands.WidthColumn;
-import ru.developer.press.mytable.interfaces.BottomMenuClick;
-import ru.developer.press.mytable.interfaces.CellEditListener;
-import ru.developer.press.mytable.interfaces.HistoryUpdateListener;
-import ru.developer.press.mytable.interfaces.PrefCellsListener;
-import ru.developer.press.mytable.interfaces.RenameColumnListener;
-import ru.developer.press.mytable.interfaces.SelectorListener;
-import ru.developer.press.mytable.interfaces.SettingTableListener;
-import ru.developer.press.mytable.interfaces.TableActivityInterface;
-import ru.developer.press.mytable.interfaces.TableScroller;
-import ru.developer.press.mytable.interfaces.TableViewListener;
-import ru.developer.press.mytable.interfaces.UpdateHeight;
-import ru.developer.press.mytable.interfaces.UpdateWidth;
+import ru.developer.press.mytable.interfaces.SendTableGetter;
+import ru.developer.press.mytable.interfaces.table.BottomMenuClick;
+import ru.developer.press.mytable.interfaces.table.TableActivityInterface;
+import ru.developer.press.mytable.interfaces.table.TableScroller;
+import ru.developer.press.mytable.interfaces.table.callback.EditCellListener;
+import ru.developer.press.mytable.interfaces.table.callback.HistoryUpdateListener;
+import ru.developer.press.mytable.interfaces.table.callback.PrefCellsListener;
+import ru.developer.press.mytable.interfaces.table.callback.RenameColumnListener;
+import ru.developer.press.mytable.interfaces.table.callback.SelectorListener;
+import ru.developer.press.mytable.interfaces.table.callback.SettingTableListener;
+import ru.developer.press.mytable.interfaces.table.callback.TableViewListener;
+import ru.developer.press.mytable.interfaces.table.callback.UpdateHeight;
+import ru.developer.press.mytable.interfaces.table.callback.WidthListener;
+import ru.developer.press.mytable.model.Cell;
+import ru.developer.press.mytable.model.CellAbstract;
+import ru.developer.press.mytable.model.Column;
+import ru.developer.press.mytable.model.Row;
+import ru.developer.press.mytable.model.TableModel;
 import ru.developer.press.mytable.table.builders.CellBuilder;
 import ru.developer.press.mytable.table.builders.ColumnBuilder;
-import ru.developer.press.mytable.table.builders.HeaderBuilder;
 import ru.developer.press.mytable.table.builders.LineBuilder;
-import ru.developer.press.mytable.table.model.Cell;
-import ru.developer.press.mytable.table.model.CellAbstract;
-import ru.developer.press.mytable.table.model.Column;
-import ru.developer.press.mytable.table.model.Header;
-import ru.developer.press.mytable.table.model.TableModel;
+import ru.developer.press.mytable.table.builders.RowBuilder;
+import ru.developer.press.mytable.table.builders.TotalAmountBuilder;
 
 import static ru.developer.press.mytable.helpers.BottomMenuControl.AddButtonEnum.ADD_LEFT_COLUMN;
 import static ru.developer.press.mytable.helpers.BottomMenuControl.AddButtonEnum.ADD_UP_STROKE;
 
-public class TablePresenter implements TableViewListener, BottomMenuClick, CellEditListener, RenameColumnListener, HistoryUpdateListener {
+public class TablePresenter implements TableViewListener, BottomMenuClick, EditCellListener, RenameColumnListener, HistoryUpdateListener {
 
     private static TablePresenter tablePresenter;
-    private final TableModel tableModel;
+    private TableModel tableModel;
     private HistoryManager history;
 
     private TableActivityInterface activityInterface;
     private CellBuilder cellBuilder;
-    private HeaderBuilder headerBuilder;
+    private RowBuilder rowBuilder;
     private ColumnBuilder columnBuilder;
+    private TotalAmountBuilder amountBuilder;
+
     private LineBuilder lineBuilder;
 
-    private boolean cellMode = false;
-    private boolean headerMode = false;
-    private boolean columnMode = false;
+    private SelectMode selectMode = SelectMode.disable;
     private TableScroller scroller;
     private Selection selection;
 
 
-    private TablePresenter(Context context, final TableModel tableModel) {
-        this.tableModel = tableModel;
-
+    private TablePresenter(Context context) {
         history = new HistoryManager();
         columnBuilder = new ColumnBuilder(context, this);
         cellBuilder = new CellBuilder(context, this);
-        headerBuilder = new HeaderBuilder(context);
+        rowBuilder = new RowBuilder(context);
+        amountBuilder = new TotalAmountBuilder(context);
         lineBuilder = new LineBuilder(context);
 
-        cellBuilder.init(tableModel);
-        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
-            cellBuilder.updateHeightStroke(tableModel, i);
-        }
-        cellBuilder.updateHeightColumn(tableModel);
-        cellBuilder.init(tableModel);
-
-        tableModel.widthHeaders = (int) headerBuilder.widthHeaders;
         selection = new Selection(context, new SelectorListener() {
             @Override
             public void selectZone(float startX, float endX, float startY, float endY) {
                 Coordinate selectZone = null;
-                if (cellMode) {
+                if (selectMode == SelectMode.cell) {
                     selectZone = cellBuilder.selectCellsOfSelector(startX, endX, startY, endY, tableModel);
                     if (cellBuilder.getSelectCellSize() == 1) {
                         Cell selectCell = cellBuilder.getSelectCell(tableModel);
-                        activityInterface.showEditCellWindow(tableModel.getColumns().get(selectCell.columnIndex).getInputType(), selectCell.text);
+                        activityInterface.showEditCellWindow(selectCell.inputType, selectCell.text);
+                        //
                     } else {
                         activityInterface.hideEditCellWindow();
                     }
-                } else if (headerMode)
-                    selectZone = headerBuilder.selectCellsOfSelector(startX, endX, startY, endY, tableModel);
-                else if (columnMode) {
+                } else if (selectMode == SelectMode.row)
+                    selectZone = rowBuilder.selectCellsOfSelector(startX, endX, startY, endY, tableModel);
+                else if (selectMode == SelectMode.column) {
                     selectZone = columnBuilder.selectCellsOfSelector(startX, endX, startY, endY, tableModel);
                     int columnCount = columnBuilder.selectColumnCount;
                     // сначало показываем меню если выделелили первую (потом будет false)
@@ -109,25 +115,54 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
 
             @Override
             public void scrollToSelectorOffside(Coordinate coordinate) {
-                scroller.scrollToCell(coordinate, 0, 0);
+                scrollToCell();
             }
         });
+
+//        // высота тотал
+//        cellBuilder.init(tableModel);
+//        for (int i = 0; i < tableModel.getRows().size(); i++) {
+//            cellBuilder.updateHeightStroke(tableModel, i);
+//        }
+//        cellBuilder.updateHeightColumn(tableModel);
+////        cellBuilder.init(tableModel);
     }
 
-    public static TablePresenter get(Context context, TableModel table) {
+    public static TablePresenter get(Context context) {
         if (tablePresenter == null)
-            tablePresenter = new TablePresenter(context, table);
+            tablePresenter = new TablePresenter(context);
         return tablePresenter;
+    }
+
+    private void showMenuOfCell() {
+        if (selectMode == SelectMode.cell)
+            return;
+        Cell selectCell = cellBuilder.getSelectCell(tableModel);
+        activityInterface.showEditCellWindow(selectCell.inputType, selectCell.text);
+        activityInterface.showMenuOfCells();
     }
 
     @Override
     public void click(float x, float y, Coordinate coordinate) {
-        float startX = tableModel.widthHeaders + coordinate.startX;
+        // если нажали в области тотал
+        if (tableModel.isTotalAmountEnable())
+            if (y > coordinate.endY - tableModel.totalAmount.heightStroke)
+                return;
+
+        float startX = tableModel.widthRows + coordinate.startX;
         float startY = tableModel.heightColumns + coordinate.startY;
-        if (x > startX && y > startY)
+        int widthTable = tableModel.getWidthTable() + tableModel.widthRows;
+        int heightTable = tableModel.getHeightTable() + tableModel.heightColumns;
+        // чтоб не выделяла ячейку когда нажимаешь на общую строку
+
+        if (tableModel.isTotalAmountEnable())
+            heightTable -= tableModel.totalAmount.heightStroke;
+
+        if (x > startX && x < widthTable
+                && y > startY && y < heightTable)
             cellClick(x, y);
         else if (x < startX && y > startY)
-            headerClick(y);
+            rowClick(y);
         else if (y < startY && x > startX)
             columnClick(x);
     }
@@ -135,45 +170,47 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
     @Override
     public void moveSelector(float x, float y, Coordinate coordinate) {
 
-        if (cellMode)
+        if (selectMode == SelectMode.cell)
             selection.moveSelector(x, y);
-        else if (headerMode)
+        else if (selectMode == SelectMode.row)
             selection.moveSelector(0, y);
-        else if (columnMode)
+        else if (selectMode == SelectMode.column)
             selection.moveSelector(x, 0);
-        activityInterface.invalidate();
-//        selection.scrollToMoveCoordinate(coordinate, tableModel.widthHeaders, tableModel.heightColumns);
+        invalidate();
+
+//        selection.scrollToMoveCoordinate(coordinate, tableModel.widthRows, tableModel.heightColumns);
     }
 
     @Override
     public int getTableWidth() {
-        return tableModel.widthTable + tableModel.widthHeaders;
+        int width = 0;
+        if (tableModel != null)
+            width = tableModel.getWidthTable() + tableModel.widthRows;
+
+        return width;
     }
 
     @Override
     public int getTableHeight() {
-        return tableModel.heightTable + tableModel.heightColumns;
+        int height = 0;
+        if (tableModel != null)
+            height = tableModel.getHeightTable() + tableModel.heightColumns;
+        return height;
+    }
+
+    @Override
+    public void scrollToInTable() {
+        // если включена панель общей суммы то ее высоту включаем в просчет высоты таблицы
+        scroller.scrollToEndIfOutside(tableModel.getWidthTable() + tableModel.widthRows,
+                tableModel.getHeightTable() + tableModel.heightColumns);
     }
 
     private void cellClick(float x, float y) {
-        int stroke = -1;
-        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
-            int strokeEnd = (int) tableModel.getHeaders().get(i).endY;
-            if (strokeEnd > y - tableModel.heightColumns) {
-                stroke = i;
-                break;
-            }
-        }
-        int column = -1;
-        for (int i = 0; i < tableModel.getColumns().size(); i++) {
-            int columnEnd = (int) tableModel.getColumns().get(i).endX;
-            if (columnEnd > x - tableModel.widthHeaders) {
-                column = i;
-                break;
-            }
-        }
+        int[] touchCellIndex = tableModel.findIndexCellFormCoordinate(x, y);
+        int stroke = touchCellIndex[0];
+        int column = touchCellIndex[1];
 
-        if (stroke > tableModel.getHeaders().size() - 1
+        if (stroke > tableModel.getRows().size() - 1
                 || stroke < 0
                 || column > tableModel.getColumns().size() - 1
                 || column < 0)
@@ -181,39 +218,48 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
 
         if (cellBuilder.selectCell(stroke, column, tableModel)) {
             // отменяем все другие выделения если имеются
-            if (headerMode) {
-                headerMode = false;
-                headerBuilder.unSelectAll(tableModel);
+            if (selectMode == SelectMode.row) {
+                rowBuilder.unSelectAll(tableModel);
 
-            } else if (columnMode) {
-                columnMode = false;
+            } else if (selectMode == SelectMode.column) {
                 columnBuilder.unSelectAll(tableModel);
             }
-            if (!cellMode)
+            if (selectMode != SelectMode.cell)
                 activityInterface.showMenuOfCells();
-            cellMode = true;
+            selectMode = SelectMode.cell;
             //обновляем
-            activityInterface.invalidate();
+            invalidate();
 
-            Cell selectCell = cellBuilder.getSelectCell(tableModel);
+            Coordinate coordinate = tableModel.getCoordinateCell(stroke, column);
             selection.setCoordinateForSelectCell(
-                    selectCell.startX + tableModel.widthHeaders,
-                    selectCell.endX + tableModel.widthHeaders,
-                    selectCell.startY + tableModel.heightColumns,
-                    selectCell.endY + tableModel.heightColumns
+                    coordinate.startX + tableModel.widthRows,
+                    coordinate.endX + tableModel.widthRows,
+                    coordinate.startY + tableModel.heightColumns,
+                    coordinate.endY + tableModel.heightColumns
             );
-            scroller.scrollToCell(selection.getCoordinateScroll(), tableModel.widthHeaders, tableModel.heightColumns);
-            activityInterface.showEditCellWindow(tableModel.getColumns().get(selectCell.columnIndex).getInputType(), selectCell.text);
+            scrollToCell();
+            Cell selectCell = tableModel.getRows().get(stroke).getCellAtIndex(column);
+            int inputType = selectCell.inputType;
+            String text = selectCell.text;
+            if (selectCell.inputType == 3)
+                text = selectCell.valueFromFormula;
+//            if (inputType == 3) {
+//                if (coordinate.number != 0)
+//                    text = Formula.parseStringToNumber(coordinate.number, false);
+//                else text = "";
+//
+//            }
+            activityInterface.showEditCellWindow(inputType, text);
             // задаем первоначальные координаты
         } else { // если нажали на выделенную область
-            if (cellMode) {
+            if (selectMode == SelectMode.cell) {
 
-            } else if (headerMode) {
+            } else if (selectMode == SelectMode.row) {
 
-            } else if (columnMode) {
+            } else if (selectMode == SelectMode.column) {
 
             }
-            // show menu to pref_cells
+            // showFormulaDialog menu to pref_cells
 //            activityInterface.showMenuCell(x, y, iterface);
         }
         /*
@@ -223,40 +269,45 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
          */
     }
 
-    private void headerClick(float y) {
-        int heightColumns = tableModel.heightColumns;
-        int index = -1;
-        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
-            float strokeEnd = tableModel.getHeaders().get(i).endY;
-            float v = y - heightColumns;
-            if (strokeEnd > v) {
-                index = i;
-                break;
-            }
-        }
-        if (index >= tableModel.getHeaders().size() || index < 0)
+    private void scrollToCell() {
+        Coordinate coordinate = new Coordinate();
+        coordinate.setBounds(selection.getCoordinateScroll());
+        coordinate.startX -= tableModel.widthRows;
+        coordinate.startY -= tableModel.heightColumns;
+        scroller.scrollToCell(coordinate);
+    }
+
+    private void rowClick(float y) {
+        int index = tableModel.findIndexRowFormCoordinate(y);
+        if (index >= tableModel.getRows().size() || index < 0)
             return;
 
-        if (cellMode) {
-            cellMode = false;
+        if (selectMode == SelectMode.cell) {
             cellBuilder.unSelectAll(tableModel);
             activityInterface.hideEditCellWindow();
 
-        } else if (columnMode) {
-            columnMode = false;
+        } else if (selectMode == SelectMode.column) {
             columnBuilder.unSelectAll(tableModel);
         }
-        if (headerBuilder.selectHeader(index, tableModel)) {
+        // если мы не были в режиме строк то показать меню
+        if (selectMode != SelectMode.row)
+            activityInterface.showMenuOfHeaders();
+        // вернет истину если нажали на область где не выделен row а если на выделенное место то нужно показать меню
+        if (rowBuilder.selectRow(index, tableModel)) {
 
-            activityInterface.invalidate();
-            headerMode = true;
-
-            Coordinate coordinate = headerBuilder.getSelectedCellCoordinate(tableModel);
+            selectMode = SelectMode.row;
+            invalidate();
+            Coordinate coordinate = rowBuilder.getSelectedCellCoordinate(tableModel);
             selection.setSelectionCoordinate(coordinate);
 
-            scroller.scrollToStroke(headerBuilder.getSelectedCellCoordinate(tableModel));
-            activityInterface.showMenuOfHeaders(headerMode); // до того как режим изменится мы ставим меню или нет, это важно для того что бы пвторно постоянно не ставить меню
-            activityInterface.invalidate();
+            // для скроллинга убераем значение высоты колоны потому что оно не должно существовать когда идет просчет величины))
+            coordinate.startY -= tableModel.heightColumns;
+            // приходится считать и тотал
+            if (tableModel.isTotalAmountEnable() &&
+                    tableModel.isVisibleTotalAmount())
+                coordinate.endY += tableModel.totalAmount.heightStroke;
+            scroller.scrollToStroke(coordinate);
+            invalidate();
         } else {
 
         }
@@ -264,29 +315,27 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
     }
 
     private void columnClick(float x) {
+        int index = tableModel.findIndexColumnFormCoordinate(x);
         // если нажали дальше чем есть колоны то ничего не происходит
-        if (x > tableModel.getColumns().get(tableModel.getColumns().size() - 1).endX + tableModel.widthHeaders)
+        if (index < 0)
             return;
 
-        if (cellMode) {
-            cellMode = false;
+        if (selectMode == SelectMode.cell) {
             cellBuilder.unSelectAll(tableModel);
-            activityInterface.hideEditCellWindow();
-        } else if (headerMode) {
-            headerMode = false;
-            headerBuilder.unSelectAll(tableModel);
+        } else if (selectMode == SelectMode.row) {
+            rowBuilder.unSelectAll(tableModel);
         }
-        if (columnBuilder.selectColumn(x, tableModel)) {
+        if (columnBuilder.selectColumn(index, tableModel)) {
+            activityInterface.hideEditCellWindow();
             // последовательность важна
             int columnCount = columnBuilder.selectColumnCount;
-            // сначало показываем меню если выделелили первую (потом будет false)
-            activityInterface.showMenuOfColumns(!columnMode, columnCount);
-            // проверяем если выделено хоть один столбец то режим столбцов true
-            columnMode = true;
-            // если оказалось что нажатие сняло выделение с единственно выделенного столбца то возвращаем стандартное меню
-            activityInterface.invalidate();
+            activityInterface.showMenuOfColumns(selectMode != SelectMode.column, columnCount);
+            selectMode = SelectMode.column;
+            invalidate();
             Coordinate coordinate = columnBuilder.getSelectedCellCoordinate(tableModel);
             selection.setSelectionCoordinate(coordinate);
+            // для правильного подсчета отнимаем ширину строки чтоб отчет с нуля был как в скроллстроке
+            coordinate.startX -= tableModel.widthRows;
             scroller.scrollToColumn(coordinate);
         }
     }
@@ -298,17 +347,39 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
 
     @Override
     public void draw(Canvas canvas, Coordinate coordinate) {
-        if (tableModel.getHeaders().size() > 0) {
+        if (tableModel == null)
+            return;
+        if (tableModel.getRows().size() > 0) {
             cellBuilder.draw(canvas, coordinate, tableModel);
-            headerBuilder.draw(canvas, coordinate, tableModel);
+            rowBuilder.draw(canvas, coordinate, tableModel);
             columnBuilder.draw(canvas, coordinate, tableModel);
+
+
+            int heightTable = tableModel.getHeightTable() + tableModel.heightColumns;
+            // если высота таблицы меньше чем вью то высота таблицы будет конечным значением для endY
+            if (heightTable < coordinate.height)
+                coordinate.endY = heightTable;
+            // если ширина таблицы меньше чем вью то ширина таблицы будет конечным значением для endX
+            int widthTable = tableModel.getWidthTable() + tableModel.widthRows;
+            if (widthTable < coordinate.width)
+                coordinate.endX = widthTable;
+
+            boolean totalAmountEnable = tableModel.isTotalAmountEnable();
+            if (totalAmountEnable)
+                amountBuilder.draw(canvas, coordinate, tableModel);
             lineBuilder.draw(canvas, coordinate, tableModel);
-            if (cellMode)
-                selection.draw(canvas, coordinate, tableModel.widthHeaders, tableModel.heightColumns, SelectMode.cell);
-            else if (headerMode)
-                selection.draw(canvas, coordinate, tableModel.widthHeaders, tableModel.heightColumns, SelectMode.header);
-            else if (columnMode)
-                selection.draw(canvas, coordinate, tableModel.widthHeaders, tableModel.heightColumns, SelectMode.column);
+            // тут для селектора уменьщаем конец по Y чтоб не выделял тотал
+            if (totalAmountEnable) {
+                // брать всегда выше тотал
+                coordinate.endY -= tableModel.totalAmount.heightStroke;
+            }
+
+            if (selectMode == SelectMode.cell)
+                selection.draw(canvas, coordinate, tableModel.widthRows, tableModel.heightColumns, SelectMode.cell);
+            else if (selectMode == SelectMode.row)
+                selection.draw(canvas, coordinate, tableModel.widthRows, tableModel.heightColumns, SelectMode.row);
+            else if (selectMode == SelectMode.column)
+                selection.draw(canvas, coordinate, tableModel.widthRows, tableModel.heightColumns, SelectMode.column);
 
 
         }
@@ -316,12 +387,12 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
 
     @Override
     public boolean touchCoordinate(float x, float y) {
-        SelectMode selectMode = null;
-        if (cellMode) selectMode = SelectMode.cell;
-        else if (headerMode) selectMode = SelectMode.header;
-        else if (columnMode) selectMode = SelectMode.column;
+//        SelectMode selectMode = null;
+//        if (selectMode == SelectMode.cell) selectMode = SelectMode.cell;
+//        else if (selectMode == SelectMode.row) selectMode = SelectMode.row;
+//        else if (columnMode) selectMode = SelectMode.column;
 
-        if (cellMode || headerMode || columnMode)
+        if (selectMode == SelectMode.cell || selectMode == SelectMode.row || selectMode == SelectMode.column)
             return selection.isTouchInSelector(x, y, selectMode);
 //        else if (headerMode){
 //            return  true
@@ -333,25 +404,15 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
 
     @Override
     public void eventUp() {
+        if (tableModel == null)
+            return;
         selection.moveCoordinateToSelect();
-        if (cellMode) {
+        if (selectMode == SelectMode.cell) {
             if (cellBuilder.getSelectCellSize() == 0) {
                 defaultState();
             }
         }
-        activityInterface.invalidate();
-    }
-
-    @Override
-    public void scrollBy(float distanceX, float distanceY) {
-        activityInterface.scrollTableBy(distanceX, distanceY,
-                tableModel.widthTable + tableModel.widthHeaders,
-                tableModel.heightTable + tableModel.heightColumns);
-    }
-
-    @Override
-    public void scrollTo(int x, int y) {
-        activityInterface.scrollTableTo(x, y);
+        invalidate();
     }
 
     @Override
@@ -381,7 +442,7 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
             addColumnIndex = startSelect;
             copyPrefsColumn = startSelect;
         } else {
-            if (columnMode) { // если мы в режиме выделения столбцов то ищем какой выделен последний
+            if (selectMode == SelectMode.column) { // если мы в режиме выделения столбцов то ищем какой выделен последний
                 addColumnIndex = endSelect + 1;
                 copyPrefsColumn = endSelect;
             } else {
@@ -393,15 +454,18 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
         columnBuilder.unSelectAll(tableModel);
 
         // добавляем и возвращаем добавленный
-        Column column = tableModel.addColumn(addColumnIndex, copyPrefsColumn);
+        tableModel.addColumn(addColumnIndex, copyPrefsColumn);
         // нормализация высоты столбцов после инициализации
-        cellBuilder.updateHeightColumn(tableModel);
-        // инициализация
-        columnBuilder.init(tableModel);
+        columnBuilder.updateHeightColumn(tableModel);
+        // инициализация колоны
+        columnBuilder.initColumn(tableModel, addColumnIndex);
+        if (tableModel.isLockAlwaysFitToScreen())
+            fitToScreen();
         //выделяем
-        columnClick(column.endX + tableModel.widthHeaders);
+        Coordinate coordinateCell = tableModel.getCoordinateCell(0, addColumnIndex);
+        columnClick(coordinateCell.endX + tableModel.widthRows);
 //        скролим (по клику скролит)
-//        scroller.scrollToColumn(column);
+//        scroller.scrollToColumn(coordinateCell);
 //
         // добавление в историю
         final AddColumn addColumn = history.addColumn(addColumnIndex, tableModel);
@@ -411,18 +475,18 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
     // тут идет логика добавления строки, смотря куда добавить, вниз или вверх
     @Override
     public void addStroke(BottomMenuControl.AddButtonEnum addButtonEnum) {
-        ArrayList<Header> headers = tableModel.getHeaders();
+        ArrayList<Row> rows = tableModel.getRows();
 
+
+        int addStrokeIndex = rows.size(); // от какой cтроки мы будем добавляться верхнего или самого нижнего
+        // узнаем первую и последнюю выделенную ячейку
         int upSelect = 0;
         int downSelect = 0;
         // на конец если мы не в режиме выделения строк и не добавляем верх
-        int addStrokeIndex = headers.size(); // от какой cтроки мы будем добавляться верхнего или самого нижнего
-
-        // узнаем первую и последнюю выделенную ячейку
         boolean start = true;
-        for (int i = 0; i < headers.size(); i++) {
-            Header header = headers.get(i);
-            if (header.isTouch) { // не забываем что у строк используется isTouch
+        for (int i = 0; i < rows.size(); i++) {
+            Row row = rows.get(i);
+            if (row.isTouch) { // не забываем что у строк используется isTouch
                 if (start) {
                     upSelect = i;
                     start = false;
@@ -436,32 +500,47 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
             addStrokeIndex = upSelect;
             copyPrefsStrokeIndex = upSelect;
         } else {
-            if (headerMode) { // если мы в режиме выделения столбцов то ищем какой выделен последний
+            if (selectMode == SelectMode.row) { // если мы в режиме выделения столбцов то ищем какой выделен последний
                 // это нужно для того что бы добавлять строку после выделенной ячейки а не на ее место
                 addStrokeIndex = downSelect + 1;
                 copyPrefsStrokeIndex = downSelect;
             }
         }
-        if (headerMode)
-            headerBuilder.unSelectAll(tableModel);
+        if (selectMode == SelectMode.row)
+            rowBuilder.unSelectAll(tableModel);
 
-        tableModel.addNewStroke(addStrokeIndex, copyPrefsStrokeIndex);
-        // инициализация всего
-        cellBuilder.updateHeightStroke(tableModel, addStrokeIndex);
-        headerBuilder.init(tableModel);
+        tableModel.addStroke(addStrokeIndex, copyPrefsStrokeIndex);
+        int finalAddStrokeIndex = addStrokeIndex;
+
+        cellBuilder.updateHeightStroke(tableModel, finalAddStrokeIndex);
+        rowBuilder.updateRow(tableModel, finalAddStrokeIndex);
+
+        Coordinate coordinateCell = tableModel.getCoordinateCell(finalAddStrokeIndex, 0);
+        rowClick(coordinateCell.startY + 1 + tableModel.heightColumns);
+
+//        activityInterface.invalidate();
+
+        final AddStroke addStrokeHistory = history.addStroke(finalAddStrokeIndex, tableModel);
+        addStrokeHistory.setOnHistoryListener(this);
+
+//        Single.fromCallable(() -> {
+//            // инициализация всего
+//            // инитим строку отдельно
+//            return finalAddStrokeIndex;
+//        }).subscribeOn(Schedulers.io())
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .subscribe(myObject -> {
+//                });
         // выделить строку
-        headerClick(headers.get(addStrokeIndex).startY + 1 + tableModel.heightColumns);
-//        scroller.scrollToStroke(headers.get(addStrokeIndex));
+//        scroller.scrollToStroke(rows.get(addStrokeIndex));
 
         // добавление в историю
-        final AddStroke addStrokeHistory = history.addStroke(addStrokeIndex, tableModel);
-        addStrokeHistory.setOnHistoryListener(this);
     }
 
     @Override
     public void setWidth(View view) { // view is'nt by here
         final ArrayList<Integer> selectIndex = new ArrayList<>();
-        if (columnMode) {
+        if (selectMode == SelectMode.column) {
             for (int i = 0; i < tableModel.getColumns().size(); i++) {
                 if (tableModel.getColumns().get(i).isTouch)
                     selectIndex.add(i);
@@ -476,78 +555,61 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
         widthStory.setOldWidths(ArrayUtils.toPrimitiveArray(width));
 
         // интерфейс для обратной связи
-        UpdateWidth updateWidth = new UpdateWidth() {
+        WidthListener widthListener = new WidthListener() {
 
             @Override // тут задается смещение на которое сместился ползунок
             public void setWidthCell(int dx) {
+
                 ArrayList<Column> columnsPref = tableModel.getColumns();
                 for (int i = 0; i < selectIndex.size(); i++) {
                     Column column = columnsPref.get(selectIndex.get(i));
-                    int width = (int) (column.width + dx);
-                    int paddingSize = column.rightPadding + column.leftPadding;
-                    if (width < paddingSize) width = paddingSize + 2;
-                    column.width = width;
+                    column.setWidth(tableModel, dx);
                 }
                 update();
-            }
 
-            private void update() {
-                cellBuilder.init(tableModel);
-                resume();
-                activityInterface.invalidate();
-                scroller.scrollToEndIfOutside(tableModel.widthTable, tableModel.heightTable);
             }
 
             @Override // кнопка для того чтобы настроить ширину всех столбцов под экран
-            public void setWidthForScreen(int widthTableView) {
-                // длина таблицы без хеадеров
-                int tableWidth = widthTableView - tableModel.widthHeaders;
-                int width = tableModel.widthTable;
-                // если ширина таблицы больше чем экран
-                while (width > tableWidth) {
-                    width = 0;
-                    // проходимся по каждой колоне и минисуем на 1 пока ширина таблицы не получится меньше чем экран
-                    for (Column column : tableModel.getColumns()) {
-                        int newWidth = (int) (column.width - 1);
-                        int widthColumn = newWidth;
-                        int paddingSize = column.rightPadding + column.leftPadding;
-                        if (widthColumn < paddingSize) widthColumn = paddingSize + 2;
+            public void setWidthForScreen() {
 
-                        column.width = widthColumn;
-                        width += newWidth;
-                    }
-                }
-                // если ширина таблицы меньше чем экран
-                // +1 для сдвига на 1 пиксель в лево от правой части экрана
-                while (width + 1 < tableWidth) {
-                    // проходим по каждому столбцу плюсуя на 1 попутно проверяя после каждого измененного столбца
-                    for (Column column : tableModel.getColumns()) {
-                        int widthColumn = (int) (column.width + 1);
-                        int paddingSize = column.rightPadding + column.leftPadding;
-                        if (widthColumn < paddingSize) widthColumn = paddingSize + 2;
+//                StaticMethods.getBackTask(new TaskListener() {
+//                    @Override
+//                    public void preExecute() {
+//
+//                    }
+//
+//                    @Override
+//                    public void doOnBackground()
+//                    {
+//                    }
+//
+//                    @Override
+//                    public void main() {
+//                    }
+//                });
+                if (tableModel.isLockAlwaysFitToScreen())
+                    return;
 
-                        column.width = widthColumn;
-                        width++;
-                        if (width == tableWidth) break;
-                    }
-                }
+                tableModel.fitToScreen(0);
+                update();
                 stopTracking();
+                setWidth(view);
             }
 
             // этот метод служит для того что бы всегда получать усредненную ширину всех столбцов
             @Override
             public int getGeneralWidth() {
                 int width = 0;
-                if (columnMode) {
+                if (selectMode == SelectMode.column) {
                     for (int i = 0; i < selectIndex.size(); i++) {
                         Column column = tableModel.getColumns().get(selectIndex.get(i));
-                        width += column.width;
+                        width += column.getWidth();
                     }
                     width /= selectIndex.size();
                 } else {
 
                     for (Column col : tableModel.getColumns()) {
-                        width += col.width;
+                        width += col.getWidth();
                     }
                     width /= tableModel.getColumns().size();
                 }
@@ -571,73 +633,96 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
             }
 
             private void init() {
-                for (int i = 0; i < tableModel.getHeaders().size(); i++) {
+                for (int i = 0; i < tableModel.getRows().size(); i++) {
                     cellBuilder.updateHeightStroke(tableModel, i);
                 }
-                cellBuilder.updateHeightColumn(tableModel);
+                for (int index :
+                        selectIndex) {
+                    amountBuilder.initTotalAmountToColumn(tableModel, index);
+                }
+                columnBuilder.updateHeightColumn(tableModel);
+                amountBuilder.updateHeightTotalAmount(tableModel);
+            }
+
+            private void update() {
+
+//                for (int index :
+//                        selectIndex) {
+//                    columnBuilder.initColumn(tableModel, index);
+//                }
+                if (tableModel.isLockAlwaysFitToScreen())
+                    fitToScreen();
+                updateSelectionCoordinate(); //
+                invalidate();
+                scrollToInTable();
             }
         };
-        activityInterface.showEditWidthCellsWin(view, updateWidth);
+        activityInterface.showEditWidthCells(tableModel.widthRows, widthListener);
     }
 
     @Override
-    public void setHeightCells(View view) {
+    public void setHeightCells() {
         final ArrayList<Integer> selectIndex = new ArrayList<>();
-        if (headerMode) {
-            for (int i = 0; i < tableModel.getHeaders().size(); i++) {
-                if (tableModel.getHeaders().get(i).isTouch)
+        if (selectMode == SelectMode.row) {
+            for (int i = 0; i < tableModel.getRows().size(); i++) {
+                if (tableModel.getRows().get(i).isTouch)
                     selectIndex.add(i);
             }
         } else {
-            for (int i = 0; i < tableModel.getHeaders().size(); i++) {
+            for (int i = 0; i < tableModel.getRows().size(); i++) {
                 selectIndex.add(i);
             }
         }
         int genHeight = 0;
         for (int index :
                 selectIndex) {
-            genHeight += tableModel.getHeaders().get(index).height;
+            genHeight += tableModel.getRows().get(index).height;
         }
         genHeight = genHeight / selectIndex.size();
 
 
-        ArrayList<Header> headerPrefs = tableModel.getHeaders();
-        int[] oldHeight = new int[headerPrefs.size()];
-        for (int i = 0; i < headerPrefs.size(); i++) {
-            Header header = headerPrefs.get(i);
-            oldHeight[i] = (int) header.height;
+        ArrayList<Row> rowPrefs = tableModel.getRows();
+        int[] oldHeight = new int[rowPrefs.size()];
+        for (int i = 0; i < rowPrefs.size(); i++) {
+            Row row = rowPrefs.get(i);
+            oldHeight[i] = (int) row.height;
         }
 
         UpdateHeight updateHeight = new UpdateHeight() {
             @Override
             public void setHeight(int height) {
 
-                for (int index :
-                        selectIndex) {
-                    Header headerPref = tableModel.getHeaders().get(index);
-                    int paddingSize = headerPref.downPadding + headerPref.upPadding;
+                for (int index : selectIndex) {
+                    Row rowPref = tableModel.getRows().get(index);
+                    int paddingSize = rowPref.pref.paddingDown + rowPref.pref.paddingUp;
+                    for (Cell cell : tableModel.getRows().get(index).getCells()) {
+                        int paddingSizeCell = cell.pref.paddingDown + cell.pref.paddingUp;
+                        if (paddingSize < paddingSizeCell)
+                            paddingSize = paddingSizeCell;
+                    }
                     if (height < paddingSize) height = paddingSize + 2;
-                    headerPref.height = height;
-                    headerPref.heightStroke = height;
+
+                    rowPref.height = height;
+                    rowPref.heightStroke = height;
                 }
                 // просто рисуем какую высоту мы задали
                 update();
             }
 
             private void update() {
-                cellBuilder.init(tableModel);
-                resume();
-                activityInterface.invalidate();
-                scroller.scrollToEndIfOutside(tableModel.widthTable, tableModel.heightTable);
+//                cellBuilder.init(tableModel);
+                updateSelectionCoordinate();
+                invalidate();
+                scrollToInTable();
             }
 
             @Override
             public void onDismiss() {
 
-                int[] newHeight = new int[headerPrefs.size()];
-                for (int i = 0; i < headerPrefs.size(); i++) {
-                    Header header = headerPrefs.get(i);
-                    newHeight[i] = (int) header.height;
+                int[] newHeight = new int[rowPrefs.size()];
+                for (int i = 0; i < rowPrefs.size(); i++) {
+                    Row row = rowPrefs.get(i);
+                    newHeight[i] = (int) row.height;
                 }
                 HeightStroke heightStroke = new HeightStroke(oldHeight, newHeight);
                 heightStroke.setOnHistoryListener(TablePresenter.this);
@@ -649,137 +734,217 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
             public void stopTracking() {
                 // делаем как надо с учетом блокировки высоты
                 for (int index : selectIndex) {
-//                    Header headerPref = tableModel.getHeaders().get(index);
+//                    Row headerPref = tableModel.getRows().get(index);
 //                    headerPref.height = headerPref.heightStroke;
                     cellBuilder.updateHeightStroke(tableModel, index);
                 }
                 update();
             }
         };
-        activityInterface.showEditHeightCellsWin(view, genHeight, updateHeight);
+        activityInterface.showEditHeightCells(genHeight, updateHeight);
     }
 
     @Override
     public void settingTable() {
         SettingTableListener setting = new SettingTableListener(tableModel) {
+
             @Override
             public void setLockHeight(boolean lockHeight) {
                 tableModel.setLockHeightCells(lockHeight);
 
-                cellBuilder.init(tableModel);
-                selection.updateCoordinateDraw(cellBuilder.getSelectedCellCoordinate(tableModel));
-                activityInterface.invalidate();
-                scroller.scrollToEndIfOutside(tableModel.widthTable, tableModel.heightTable);
+                for (int i = 0; i < tableModel.getRows().size(); i++) {
+                    cellBuilder.updateHeightStroke(tableModel, i);
+                }
+//                cellBuilder.init(tableModel);
+//                resume();
+                updateSelectionCoordinate();
+                invalidate();
+                scrollToInTable();
             }
 
             @Override
-            public void setDateVariable(int variable) {
-                tableModel.setDateType(variable);
-                for (int i = 0; i < tableModel.getHeaders().size(); i++) {
-                    cellBuilder.updateHeightStroke(tableModel, i);
+            public void setLockAlwaysFitToScreen(boolean lockAlwaysFitToScreen) {
+                tableModel.setLockAlwaysFitToScreen(lockAlwaysFitToScreen);
+                if (lockAlwaysFitToScreen) {
+
+                    fitToScreen();
+                    invalidate();
+                    scrollToInTable();
                 }
-                cellBuilder.init(tableModel);
-                activityInterface.invalidate();
+            }
+
+            @Override
+            public void setTotalAmountEnable(boolean totalAmountEnable) {
+                tableModel.setTotalAmountEnable(totalAmountEnable);
+                invalidate();
+//                cellBuilder.init(tableModel);
+                scrollToInTable();
             }
         };
-        activityInterface.showSettingTableWin(setting);
+        activityInterface.showSettingTable(setting);
+    }
+
+    private void fitToScreen() {
+        if (tableModel.getWidthTable() + tableModel.widthRows == tableModel.getWidthView()
+                || !tableModel.isLockAlwaysFitToScreen())
+            return;
+
+        tableModel.fitToScreen((float) 0);
+        for (int i = 0; i < tableModel.getRows().size(); i++) {
+            cellBuilder.updateHeightStroke(tableModel, i);
+        }
+        for (int i = 0; i < tableModel.getColumns().size(); i++) {
+
+            amountBuilder.initTotalAmountToColumn(tableModel, i);
+
+        }
+        columnBuilder.updateHeightColumn(tableModel);
+        amountBuilder.updateHeightTotalAmount(tableModel);
+//        cellBuilder.init(tableModel);
     }
 
     public void updateTable(Context context) {
-        TableLab.get(context).saveTable(tableModel);
+
+        if (tableModel != null && !history.isSaved) {
+            TableLab.get(context).saveTable(tableModel);
+            history.isSaved = true;
+        }
+//        else
+//            AppEvents.get().tableFileSaved();
     }
 
     public void setText(String s) {
 
-        if (cellMode) {
+        if (selectMode == SelectMode.cell) {
             Cell cell = cellBuilder.getSelectCell(tableModel);
-            if (!s.equals(cell.text)) {
-                cell.text = s;
-                int oldHeight = (int) cell.height;
-                cellBuilder.updateHeightStroke(tableModel, cell.strokeIndex);
-                cellBuilder.init(tableModel);
-                selection.updateCoordinateDraw(cellBuilder.getSelectedCellCoordinate(tableModel));
-                if (oldHeight != cell.height
-                        || s.length() > 0 && s.charAt(s.length() - 1) == '\n')
-                    scroller.scrollToCell(selection.getCoordinateScroll(), tableModel.widthHeaders, tableModel.heightColumns);
+//            Column column = tableModel.getColumns().get(cell.indexColumn);
+//            int inputType = column.getInputType();
 
+//            if (inputType == 1) {
+//                cell.number = Formula.parseStringToNumber(text);
+//            }
+//            else
+//            if (inputType == 3) {
+//                double number = column.getFormula().getValueFromFormula(tableModel, cell.indexRow);
+//                text = Formula.parseStringToNumber(number, true);
+//            }
+            String oldText = cell.text;
+            int oldHeight = (int) cell.height;
+
+            if (cell.inputType == 3) {
+                cell.valueFromFormula = s;
+            } else {
+                cell.text = s;
             }
-        } else if (columnMode) {
+            cellBuilder.updateHeightStroke(tableModel, cell.indexRow);
+//            cellBuilder.init(tableModel);
+            if (!oldText.equals(cell.text)) {
+                updateSelectionCoordinate();
+                if (oldHeight != cell.height
+                        || s.length() > 0 && s.charAt(s.length() - 1) == '\n') {
+                    scrollToCell();
+                    scrollToInTable();
+                }
+                cellBuilder.initTotalAmountToColumn(tableModel, cell.indexColumn);
+                cellBuilder.updateCell(cell);
+                cellBuilder.updateFormulaAtCell(tableModel, cell);
+            }
+        } else if (selectMode == SelectMode.column) {
 
             Column renameColumn = columnBuilder.getSelectColumn(tableModel);
             if (!s.equals(renameColumn.text)) {
                 renameColumn.text = s;
                 // обновляем высоту у колумнвью
-                cellBuilder.updateHeightColumn(tableModel);
+                columnBuilder.updateHeightColumn(tableModel);
                 //надо обновить чтоб высота была что нужно
-                columnBuilder.init(tableModel);
+//                columnBuilder.init(tableModel);
             }
         }
 
-        activityInterface.invalidate();
+        invalidate();
     }
 
     public void openKeyboardEvent(boolean isOpen) {
 //        if (cellMode)
         if (isOpen) {
-            if (cellMode)
-                scroller.scrollToCell(selection.getCoordinateScroll(), tableModel.widthHeaders, tableModel.heightColumns);
+            if (selectMode == SelectMode.cell)
+                scrollToCell();
         } else
-            scroller.scrollToEndIfOutside(tableModel.widthTable + tableModel.widthHeaders,
-                    tableModel.heightTable + tableModel.heightColumns);
+            scrollToInTable();
     }
 
-    public void destroyed(Context context) {
-        TableLab.get(context).deleteCache();
+    public void destroyed() {
         tablePresenter = null;
     }
 
-    public void resume() {
+    private void updateSelectionCoordinate() {
         Coordinate coordinate = null;
-        if (cellMode) {
+        if (selectMode == SelectMode.cell) {
             coordinate = cellBuilder.getSelectedCellCoordinate(tableModel);
-        } else if (headerMode) {
-            coordinate = headerBuilder.getSelectedCellCoordinate(tableModel);
-        } else if (columnMode) {
+        } else if (selectMode == SelectMode.row) {
+            coordinate = rowBuilder.getSelectedCellCoordinate(tableModel);
+        } else if (selectMode == SelectMode.column) {
             coordinate = columnBuilder.getSelectedCellCoordinate(tableModel);
         }
         if (coordinate != null) {
             selection.setSelectionCoordinate(coordinate);
         }
-        activityInterface.invalidate();
+        invalidate();
+    }
+
+    public void resume() {
+        if (tableModel == null)
+            return;
+
+        if (tableModel.isLockAlwaysFitToScreen())
+            fitToScreen();
+        Coordinate coordinate = null;
+        if (selectMode == SelectMode.cell) {
+            coordinate = cellBuilder.getSelectedCellCoordinate(tableModel);
+            if (cellBuilder.getSelectCellSize() == 1)
+                showMenuOfCell();
+
+        } else if (selectMode == SelectMode.row) {
+            coordinate = rowBuilder.getSelectedCellCoordinate(tableModel);
+            activityInterface.showMenuOfHeaders();
+        } else if (selectMode == SelectMode.column) {
+            coordinate = columnBuilder.getSelectedCellCoordinate(tableModel);
+            activityInterface.showMenuOfColumns(true, columnBuilder.selectColumnCount);
+        }
+        if (coordinate != null) {
+            selection.setSelectionCoordinate(coordinate);
+        }
+        invalidate();
     }
 
     public boolean defaultState() {
         boolean toReturn = true;
 
-        if (cellMode) {
-            cellMode = false;
+        if (selectMode == SelectMode.cell) {
             cellBuilder.unSelectAll(tableModel);
             activityInterface.hideEditCellWindow();
-            scroller.scrollToEndIfOutside(tableModel.widthTable + tableModel.widthHeaders, tableModel.heightTable + tableModel.heightColumns);
-        } else if (headerMode) {
-            headerMode = false;
-            headerBuilder.unSelectAll(tableModel);
-
-        } else if (columnMode) {
-            columnMode = false;
+            scrollToInTable();
+        } else if (selectMode == SelectMode.row) {
+            rowBuilder.unSelectAll(tableModel);
+        } else if (selectMode == SelectMode.column) {
             columnBuilder.unSelectAll(tableModel);
             activityInterface.hideEditCellWindow();
 
         } else {
             toReturn = false;
         }
+        selectMode = SelectMode.disable;
 
         if (toReturn)
             activityInterface.showDefaultMenu();
-        activityInterface.invalidate();
+        invalidate();
         return toReturn;
     }
 
     public void getColumnRenameWin() {
         Column column = columnBuilder.getSelectColumn(tableModel);
         if (column != null)
-            activityInterface.showRenameColumnWin(column);
+            activityInterface.showEditCellWindow(0, column.text);
     }
 
     public void prefCells() {
@@ -793,13 +958,13 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
                 indexColumns.add(i);
             }
         }
-        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
-            if (tableModel.getHeaders().get(i).isTouch)
+        for (int i = 0; i < tableModel.getRows().size(); i++) {
+            if (tableModel.getRows().get(i).isTouch)
                 indexHeaderPrefs.add(i);
         }
-        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
+        for (int i = 0; i < tableModel.getRows().size(); i++) {
             for (int j = 0; j < tableModel.getColumns().size(); j++) {
-                Cell cell = tableModel.getHeaders().get(i).getCell(j);
+                Cell cell = tableModel.getRows().get(i).getCellAtIndex(j);
                 if (cell.isTouch) {
                     int[] index = new int[2];
                     index[0] = i;
@@ -809,191 +974,294 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
                 }
             }
         }
+        // обновляем имена в формуле так как они не меняются когда переименовывается столбец
+        for (int index : indexColumns) {
+            Column column = tableModel.getColumns().get(index);
+            column.getFormula().updateColumnNames(tableModel);
+        }
 
-//
         final EditPrefs editColumn = new EditPrefs(indexColumns, indexHeaderPrefs, indexCells);
         editColumn.setOnHistoryListener(this);
         editColumn.setOldPrefs(tableModel);
 //
         PrefCellsListener prefCellsListener = new PrefCellsListener() {
 
-            private void update() {
-                Coordinate coordinate = null;
-                if (cellMode) {
+            public void update() {
+                if (selectMode == SelectMode.cell) {
                     int index = -1;
                     for (int i = 0; i < indexCells.size(); i++) {
-                        int in = indexCells.get(i)[0];
+                        int[] indexCell = indexCells.get(i);
+                        int indexRow = indexCell[0];
+                        int indexColumn = indexCell[1];
+                        Cell cell = tableModel.getRows().get(indexRow).getCellAtIndex(indexColumn);
+                        cellBuilder.updateCell(cell);
                         //типа опимизация
-                        if (in != index)
-                            cellBuilder.updateHeightStroke(tableModel, in);
-                        index = in;
+                        if (indexRow != index)
+                            cellBuilder.updateHeightStroke(tableModel, indexRow);
+                        index = indexRow;
                     }
-                    coordinate = cellBuilder.getSelectedCellCoordinate(tableModel);
-                } else if (headerMode) {
-                    for (int i = 0; i < indexHeaderPrefs.size(); i++) {
+//                    cellBuilder.init(tableModel);
+                } else if (selectMode == SelectMode.row) {
+                    for (int index : indexHeaderPrefs) {
+                        Row row = tableModel.getRows().get(index);
+                        for (Cell cell : row.getCells()) {
+                            cellBuilder.updateCell(cell);
+                        }
+                        cellBuilder.updateHeightStroke(tableModel, index);
+                    }
+//                    cellBuilder.init(tableModel);
+                } else if (selectMode == SelectMode.column) {
+                    for (int i = 0; i < tableModel.getRows().size(); i++) {
+                        for (int index : indexColumns) {
+                            Cell cell = tableModel.getRows().get(i).getCellAtIndex(index);
+                            cellBuilder.updateCell(cell);
+                        }
                         cellBuilder.updateHeightStroke(tableModel, i);
                     }
-                    coordinate = headerBuilder.getSelectedCellCoordinate(tableModel);
-                } else if (columnMode) {
-                    for (int i = 0; i < tableModel.getHeaders().size(); i++) {
-                        cellBuilder.updateHeightStroke(tableModel, i);
-                    }
-                    cellBuilder.updateHeightColumn(tableModel);
-                    coordinate = columnBuilder.getSelectedCellCoordinate(tableModel);
+                    columnBuilder.updateHeightColumn(tableModel);
+//                    cellBuilder.init(tableModel);
                 }
-                cellBuilder.init(tableModel);
-                if (coordinate != null)
-                    selection.updateCoordinateDraw(coordinate);
-                activityInterface.invalidate();
+                updateSelectionCoordinate();
+                invalidate();
+            }
+
+            @Override
+            public boolean verifyIsCircledDepended(Formula formula) {
+                Column columnPref = tableModel.getColumns().get(indexColumns.get(0));
+//                Formula formula = tableModel.getColumns().get(indexColumns.get(0)).getFormula();
+                ArrayList<ColumnAttribute> columnAtr = formula.getColumnAttributes();
+                for (int i = 0; i < columnAtr.size(); i++) {
+                    Column column = tableModel.getColumnAtId(columnAtr.get(i).getNameId());
+                    if (column != null)
+                        if (column.getInputType() == 3) {
+                            for (ColumnAttribute colAttr : column.getFormula().getColumnAttributes()) {
+                                if (colAttr.getNameId().equals(columnPref.getNameIdColumn()))
+                                    return true;
+                            }
+                        }
+                }
+                return false;
+            }
+
+            @Override
+            public int getSelectedColumnSize() {
+                return indexColumns.size();
+            }
+
+            @Override
+            public void setDateVariable(int variable) {
+                dateVariable = variable;
+                tableModel.setDateType(variable);
             }
 
             @Override
             public void setType(int type) {
-                if (!columnMode)
+                if (selectMode != SelectMode.column)
                     return;
                 this.type = type;
                 for (int i = 0; i < indexColumns.size(); i++) {
                     Column column = tableModel.getColumns().get(indexColumns.get(i));
                     column.setInputType(type);
+                    if (type == 3) {
+//                        if (column.getInputType() == 3) {
+//                        for (int j = 0; j < tableModel.getRows().size(); j++) {
+//                            Cell cell = tableModel.getRows().get(j).getCellAtIndex(column.index);
+//                            cell.getNumber();
+//                        }
+//                        }
+                    }
+//                    if (type != 1 && type != 3) {
+//                        if (column.getInputType() == 1 || column.getInputType() == 3) {
+//                            for (int j = 0; j < tableModel.getRows().size(); j++) {
+//                                Cell cell = tableModel.getRows().get(j).getCellAtIndex(column.index);
+//                                cell.text = Formula.parseStringToNumber(cell.number, true);
+////                                cell.number = 0;
+//                            }
+//                        }
+//                    }
+                    columnBuilder.initColumn(tableModel, indexColumns.get(i));
                 }
                 update();
             }
 
             @Override
-            public void setFunction(String function) {
-                if (!columnMode)
+            public void setFormula(Formula formula) {
+                if (selectMode != SelectMode.column)
                     return;
-                this.function = function;
+                this.formula = formula;
                 for (int i = 0; i < indexColumns.size(); i++) {
                     Column column = tableModel.getColumns().get(indexColumns.get(i));
-                    column.setFunction(function);
+                    column.setFormula(formula);
                 }
                 update();
             }
 
             @Override
             public void setSizeText(int size) {
-                this.sizeText = size;
+                this.pref.sizeFont = size;
                 for (int i = 0; i < indexColumns.size(); i++) {
                     Column column = tableModel.getColumns().get(indexColumns.get(i));
-                    column.sizeFont = size;
+                    column.pref.sizeFont = size;
                 }
                 for (int index : indexHeaderPrefs) {
-                    Header header = tableModel.getHeaders().get(index);
-                    header.sizeFont = size;
+                    Row row = tableModel.getRows().get(index);
+                    row.pref.sizeFont = size;
                 }
-                if (isCellsEdit)
+                if (checkCellPrefs)
                     for (int[] index : indexCells) {
-                        Cell cell = tableModel.getHeaders().get(index[0]).getCell(index[1]);
-                        cell.sizeFont = size;
+                        Cell cell = tableModel.getRows().get(index[0]).getCellAtIndex(index[1]);
+                        cell.pref.sizeFont = size;
                     }
                 update();
             }
 
             @Override
             public void setBold(int bold) {
-                this.bold = bold;
+                this.pref.bold = bold;
                 for (int i = 0; i < indexColumns.size(); i++) {
                     Column column = tableModel.getColumns().get(indexColumns.get(i));
-                    column.bold = bold;
+                    column.pref.bold = bold;
                 }
                 for (int index : indexHeaderPrefs) {
-                    Header header = tableModel.getHeaders().get(index);
-                    header.bold = bold;
+                    Row row = tableModel.getRows().get(index);
+                    row.pref.bold = bold;
                 }
-                if (isCellsEdit)
+                if (checkCellPrefs)
                     for (int[] index : indexCells) {
-                        Cell cell = tableModel.getHeaders().get(index[0]).getCell(index[1]);
-                        cell.bold = bold;
+                        Cell cell = tableModel.getRows().get(index[0]).getCellAtIndex(index[1]);
+                        cell.pref.bold = bold;
                     }
                 update();
             }
 
             @Override
             public void setItalic(int italic) {
-                this.italic = italic;
+                this.pref.italic = italic;
                 for (int i = 0; i < indexColumns.size(); i++) {
                     Column column = tableModel.getColumns().get(indexColumns.get(i));
-                    column.italic = italic;
+                    column.pref.italic = italic;
                 }
                 for (int index : indexHeaderPrefs) {
-                    Header header = tableModel.getHeaders().get(index);
-                    header.italic = italic;
+                    Row row = tableModel.getRows().get(index);
+                    row.pref.italic = italic;
                 }
-                if (isCellsEdit)
+                if (checkCellPrefs)
                     for (int[] index : indexCells) {
-                        Cell cell = tableModel.getHeaders().get(index[0]).getCell(index[1]);
-                        cell.italic = italic;
+                        Cell cell = tableModel.getRows().get(index[0]).getCellAtIndex(index[1]);
+                        cell.pref.italic = italic;
                     }
                 update();
-//                activityInterface.updateColumnHeight(columnBuilder.heightColumns);
             }
 
             @Override
             public void setColorText(int color) {
-                this.colorText = color;
+                this.pref.colorFont = color;
                 for (int i = 0; i < indexColumns.size(); i++) {
                     Column column = tableModel.getColumns().get(indexColumns.get(i));
-                    column.colorFont = colorText;
+                    column.pref.colorFont = pref.colorFont;
                 }
                 for (int index : indexHeaderPrefs) {
-                    Header header = tableModel.getHeaders().get(index);
-                    header.colorFont = colorText;
+                    Row row = tableModel.getRows().get(index);
+                    row.pref.colorFont = pref.colorFont;
                 }
-                if (isCellsEdit)
+                if (checkCellPrefs)
                     for (int[] index : indexCells) {
-                        Cell cell = tableModel.getHeaders().get(index[0]).getCell(index[1]);
-                        cell.colorFont = colorText;
+                        Cell cell = tableModel.getRows().get(index[0]).getCellAtIndex(index[1]);
+                        cell.pref.colorFont = pref.colorFont;
                     }
                 update();
             }
 
             @Override
             public void setColorBack(int color) {
-                this.colorBack = color;
+                this.pref.colorBack = color;
                 for (int i = 0; i < indexColumns.size(); i++) {
                     Column column = tableModel.getColumns().get(indexColumns.get(i));
-                    column.colorBack = colorBack;
+                    column.pref.colorBack = pref.colorBack;
                 }
                 for (int index : indexHeaderPrefs) {
-                    Header header = tableModel.getHeaders().get(index);
-                    header.colorBack = colorBack;
+                    Row row = tableModel.getRows().get(index);
+                    row.pref.colorBack = pref.colorBack;
                 }
-                if (isCellsEdit)
+                if (checkCellPrefs)
                     for (int[] index : indexCells) {
-                        Cell cell = tableModel.getHeaders().get(index[0]).getCell(index[1]);
-                        cell.colorBack = colorBack;
+                        Cell cell = tableModel.getRows().get(index[0]).getCellAtIndex(index[1]);
+                        cell.pref.colorBack = pref.colorBack;
                     }
                 update();
             }
 
             @Override
+            public void updatePadding() {
+                for (int i = 0; i < indexColumns.size(); i++) {
+                    Column column = tableModel.getColumns().get(indexColumns.get(i));
+                    column.pref.paddingLeft = pref.paddingLeft;
+                    column.pref.paddingRight = pref.paddingRight;
+                    column.pref.paddingUp = pref.paddingUp;
+                    column.pref.paddingDown = pref.paddingDown;
+                }
+
+                if (checkCellPrefs)
+                    for (int[] index : indexCells) {
+                        Cell cell = tableModel.getRows().get(index[0]).getCellAtIndex(index[1]);
+                        cell.pref.paddingLeft = pref.paddingLeft;
+                        cell.pref.paddingRight = pref.paddingRight;
+                        cell.pref.paddingUp = pref.paddingUp;
+                        cell.pref.paddingDown = pref.paddingDown;
+                    }
+                updateWidthColumns();
+                update();
+            }
+
+            private void updateWidthColumns() {
+                for (int i = 0; i < indexColumns.size(); i++) {
+                    Column column = tableModel.getColumns().get(indexColumns.get(i));
+                    // второй параметр типа ничего не добавлять (он кстати не назначает а добавляет к имеющейся)
+                    column.setWidth(tableModel, 0);
+                }
+            }
+
+            @Override
             public void closeWindow() {
-                editColumn.setNewColumns(tableModel);
-                history.editColumns(editColumn);
+                editColumn.setNewPrefs(tableModel);
+                history.editPrefs(editColumn);
+            }
+
+            @Override
+            public List<ColumnAttribute> getColumnAttrs() {
+                ArrayList<ColumnAttribute> columnAttributes = new ArrayList<>();
+                for (int i = 0; i < tableModel.getColumns().size(); i++) {
+                    Column column = tableModel.getColumns().get(i);
+                    // если это колона та которая выделена то не добавляем
+//                    if (column == tableModel.getColumns().get(indexColumns.get(0)))
+//                        continue;
+
+                    ColumnAttribute attr = new ColumnAttribute(column.text,
+                            column.getNameIdColumn(),
+                            column.getInputType());
+                    columnAttributes.add(attr);
+                }
+                return columnAttributes;
             }
         };
-        prefCellsListener.isCellsEditOnly = cellMode;
-        prefCellsListener.isHeaderEdit = headerMode;
 
         // тут нужно для опредления какого типа данные для настройки отправляются в окно
         CellAbstract cellAbstract;
-        if (columnMode) {
+        if (selectMode == SelectMode.column) {
             cellAbstract = tableModel.getColumns().get(indexColumns.get(0));
             prefCellsListener.type = ((Column) cellAbstract).getInputType();
-            prefCellsListener.function = ((Column) cellAbstract).getFunction();
-        } else if (headerMode)
-            cellAbstract = tableModel.getHeaders().get(indexHeaderPrefs.get(0));
-        else
-            cellAbstract = tableModel.getHeaders().get(indexCells.get(0)[0]).getCell(indexCells.get(0)[1]);
+            prefCellsListener.formula = ((Column) cellAbstract).getFormula();
+        } else if (selectMode == SelectMode.row) {
+            cellAbstract = tableModel.getRows().get(indexHeaderPrefs.get(0));
+        } else {
+            cellAbstract = tableModel.getRows().get(indexCells.get(0)[0]).getCellAtIndex(indexCells.get(0)[1]);
+        }
 
-        prefCellsListener.sizeText = (int) cellAbstract.sizeFont;
-        prefCellsListener.bold = cellAbstract.bold;
-        prefCellsListener.italic = cellAbstract.italic;
-        prefCellsListener.colorText = cellAbstract.colorFont;
-        prefCellsListener.colorBack = cellAbstract.colorBack;
+        prefCellsListener.mode = selectMode;
+        prefCellsListener.pref.copyPref(cellAbstract.pref);
+        prefCellsListener.dateVariable = tableModel.getDateType();
 
-        activityInterface.showSettingCellWin(prefCellsListener);
+        activityInterface.showSettingCell(prefCellsListener);
     }
 
     public boolean deleteColumns() {
@@ -1014,11 +1282,21 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
         final DeleteColumn deleteColumn = history.deleteColumn(ArrayUtils.toPrimitiveArray(indexes), columnSelect, tableModel);
         deleteColumn.setOnHistoryListener(this);
         // и потом само удаление
-        columnBuilder.deleteSelectedColumn(tableModel);
-        cellBuilder.updateHeightColumn(tableModel);
-        columnBuilder.init(tableModel);
+        for (Column column : columnSelect) {
+            tableModel.deleteColumn(column);
+            // надо заново пересчитать их чтоб column.index колон обновились, при удалении ячеек используется индекс который в колоне
+            columnBuilder.init(tableModel);
+            activityInterface.invalidate();
+        }
+        columnBuilder.updateHeightColumn(tableModel);
+        for (int i = 0; i < tableModel.getRows().size(); i++) {
+            cellBuilder.updateHeightStroke(tableModel, i);
+        }
+//        columnBuilder.init(tableModel);
         defaultState();
-        scroller.scrollToEndIfOutside(tableModel.widthTable, tableModel.heightTable);
+        if (tableModel.isLockAlwaysFitToScreen())
+            fitToScreen();
+        scrollToInTable();
 
         return true;
 
@@ -1026,13 +1304,13 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
 
     public boolean deleteStroke() {
         // возвращает фалс если выделены все ячейки
-        if (headerBuilder.selectHeaderCount >= tableModel.getHeaders().size())
+        if (rowBuilder.selectRowCount >= tableModel.getRows().size())
             return false;
 
         //добавление в историю
         final List<Integer> indexes = new ArrayList<>();
-        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
-            Header stroke = tableModel.getHeaders().get(i);
+        for (int i = 0; i < tableModel.getRows().size(); i++) {
+            Row stroke = tableModel.getRows().get(i);
             if (stroke.isTouch) {
                 indexes.add(i);
             }
@@ -1040,11 +1318,11 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
         final DeleteStroke deleteStroke = history.deleteStroke(ArrayUtils.toPrimitiveArray(indexes), tableModel);
         deleteStroke.setOnHistoryListener(this);
 
-        headerBuilder.deleteHeaders(tableModel);
-        headerBuilder.init(tableModel);
+        rowBuilder.deleteRows(tableModel);
+//        rowBuilder.init(tableModel);
 
         defaultState();
-        scroller.scrollToEndIfOutside(tableModel.widthTable, tableModel.heightTable);
+        scrollToInTable();
         return true;
     }
 
@@ -1086,115 +1364,244 @@ public class TablePresenter implements TableViewListener, BottomMenuClick, CellE
 
     public void getDatePick() {
         Cell cell = cellBuilder.getSelectCell(tableModel);
-        activityInterface.showDatePickerWin(cell.date);
+        activityInterface.showDatePicker(cell.date);
     }
 
     public void setDate(long date) {
         Cell selectCell = cellBuilder.getSelectCell(tableModel);
         selectCell.date = date;
-        cellBuilder.updateHeightStroke(tableModel, selectCell.strokeIndex);
-        cellBuilder.init(tableModel); // тут это обязательно там логика для отображения даты
-        selection.updateCoordinateDraw(cellBuilder.getSelectedCellCoordinate(tableModel));
-        activityInterface.showEditCellWindow(tableModel.getColumns().get(selectCell.columnIndex).getInputType(), selectCell.text);
-        activityInterface.invalidate();
+        rowBuilder.updateRow(tableModel, selectCell.indexRow);
+        cellBuilder.updateHeightStroke(tableModel, selectCell.indexRow);
+        activityInterface.showEditCellWindow(selectCell.inputType, selectCell.text);
+        updateSelectionCoordinate();
+        invalidate();
     }
 
     public void clearText() {
+        if (selectMode != SelectMode.cell) {
+            return;
+        }
         cellBuilder.clearText(tableModel);
         Cell selectCell = cellBuilder.getSelectCell(tableModel);
-        cellBuilder.updateHeightStroke(tableModel, selectCell.strokeIndex);
-        cellBuilder.init(tableModel);
-        selection.updateCoordinateDraw(cellBuilder.getSelectedCellCoordinate(tableModel));
-        activityInterface.showEditCellWindow(tableModel.getColumns().get(selectCell.columnIndex).getInputType(), selectCell.text);
-        activityInterface.invalidate();
-
+        cellBuilder.updateHeightStroke(tableModel, selectCell.indexRow);
+        invalidate();
+//        cellBuilder.init(tableModel);
+//        activityInterface.showEditCellWindow(selectCell.inputType, selectCell.text);
+        updateSelectionCoordinate();
     }
 
     @Override
     public void undo(Command command) {
-        initAndUpdate();
 
-//        if (command instanceof AddColumn || command instanceof AddStroke)
-//            scrollToEndIfOutside();
         if (command instanceof DeleteColumn) {
+            selectMode = SelectMode.column;
             DeleteColumn deleteColumn = (DeleteColumn) command;
             for (int i = 0; i < deleteColumn.index.length; i++) {
                 int index = deleteColumn.index[i];
                 Column column = tableModel.getColumns().get(index);
                 column.select(tableModel);
             }
-            columnMode = true;
             Coordinate coordinate = columnBuilder.getSelectedCellCoordinate(tableModel);
+            columnBuilder.selectCellsOfSelector(coordinate.startX, coordinate.endX, coordinate.startY, coordinate.endY, tableModel);
             selection.setSelectionCoordinate(coordinate);
+            int selectColumnCount = columnBuilder.selectColumnCount;
+            activityInterface.showMenuOfColumns(true, selectColumnCount);
+
+
         } else if (command instanceof DeleteStroke) {
             DeleteStroke deleteStroke = (DeleteStroke) command;
             for (int i = 0; i < deleteStroke.index.length; i++) {
                 int index = deleteStroke.index[i];
-                Header header = tableModel.getHeaders().get(index);
-                header.select();
+                Row row = tableModel.getRows().get(index);
+                row.select();
             }
-            headerMode = true;
-            Coordinate coordinate = headerBuilder.getSelectedCellCoordinate(tableModel);
+            selectMode = SelectMode.row;
+            Coordinate coordinate = rowBuilder.getSelectedCellCoordinate(tableModel);
             selection.setSelectionCoordinate(coordinate);
+            activityInterface.showMenuOfHeaders();
 
         } else if (command instanceof EditCell) {
             EditCell editCell1 = (EditCell) command;
             int[] index = editCell1.index;
-            int x = (int) (tableModel.getHeaders().get(index[0]).getCell(index[1]).startX + 1);
-            int y = (int) (tableModel.getHeaders().get(index[0]).getCell(index[1]).startY + 1);
-            cellClick(x + tableModel.widthHeaders, y + tableModel.heightColumns);
+            Coordinate coordinate = tableModel.getCoordinateCell(index[0], index[1]);
+            int x = (int) (coordinate.startX + 1);
+            int y = (int) (coordinate.startY + 1);
+            cellClick(x + tableModel.widthRows, y + tableModel.heightColumns);
         } else if (command instanceof RenameColumn) {
             int index = ((RenameColumn) command).index;
             float x = tableModel.getColumns().get(index).startX + 1;
-            columnClick(x + tableModel.widthHeaders);
+            columnClick(x + tableModel.widthRows);
         }
     }
 
     @Override
     public void redo(Command command) { // setWidth + setHeight
-        initAndUpdate();
+
 
         if (command instanceof AddColumn) {                   //выделяем столбец который был возвращен
             AddColumn addColumn = (AddColumn) command;
-            float x = tableModel.getColumns().get(addColumn.index).startX + 1;
-            columnClick(x + tableModel.widthHeaders);
+            Coordinate coordinateCell = tableModel.getCoordinateCell(0, addColumn.index);
+            float x = coordinateCell.startX + 1;
+            columnClick(x + tableModel.widthRows);
         } else if (command instanceof AddStroke) {
             AddStroke addStroke = (AddStroke) command;
-            float y = tableModel.getHeaders().get(addStroke.index).startY + 1;
-            headerClick(y + tableModel.heightColumns);
+            Coordinate row = tableModel.getCoordinateCell(addStroke.index, 0);
+            float y = row.startY + 1;
+            rowClick(y + tableModel.heightColumns);
         } else if (command instanceof EditCell) {
             EditCell editCell1 = (EditCell) command;
             int[] index = editCell1.index;
-            int x = (int) (tableModel.getHeaders().get(index[0]).getCell(index[1]).startX + 1);
-            int y = (int) (tableModel.getHeaders().get(index[0]).getCell(index[1]).startY + 1);
-            cellClick(x + tableModel.widthHeaders, y + tableModel.heightColumns);
+            Coordinate coordinateCell = tableModel.getCoordinateCell(index[0], index[1]);
+            int x = (int) (coordinateCell.startX + 1);
+            int y = (int) (coordinateCell.startY + 1);
+            cellClick(x + tableModel.widthRows, y + tableModel.heightColumns);
         } else if (command instanceof RenameColumn) {
             int index = ((RenameColumn) command).index;
-            float x = tableModel.getColumns().get(index).startX + 1;
-            columnClick(x + tableModel.widthHeaders);
+            Coordinate column = tableModel.getCoordinateCell(0, index);
+            float x = column.startX + 1;
+            columnClick(x + tableModel.widthRows);
         }
-
-
     }
 
-    private void initAndUpdate() {
-        defaultState();
-        cellBuilder.updateHeightColumn(tableModel);
-        for (int i = 0; i < tableModel.getHeaders().size(); i++) {
+    public void initAndUpdate() {
+//        defaultState();
+//        long start = System.currentTimeMillis();
+//        cellBuilder.init(tableModel);
+//        Log.d(TAG, "initAndUpdate: " + (System.currentTimeMillis() - start));
+        columnBuilder.init(tableModel);
+        invalidate();
+        columnBuilder.updateHeightColumn(tableModel);
+        invalidate();
+        for (int i = 0; i < tableModel.getRows().size(); i++) {
+            rowBuilder.updateRow(tableModel, i);
+            invalidate();
             cellBuilder.updateHeightStroke(tableModel, i);
+            invalidate();
         }
-        cellBuilder.init(tableModel);
-        activityInterface.invalidate();
-        scroller.scrollToEndIfOutside(tableModel.widthTable, tableModel.heightTable);
+        amountBuilder.initTotalAmount(tableModel);
+        activityInterface.tableOpened();
+
+//        AppEvents appEvents = AppEvents.get();
+//        StaticMethods.getBackTask(new TaskListener() {
+//
+//            @Override
+//            public void preExecute() {
+//                appEvents.startOpenTable();
+//            }
+//
+//            @Override
+//            public void doOnBackground() {
+//            }
+//
+//            @Override
+//            public void main() {
+//                invalidate();
+//                scrollToInTable();
+//            }
+//        });
     }
-    /*
 
-     */
+    private void invalidate() {
+        if (activityInterface != null)
+            activityInterface.invalidate();
+    }
 
+    public void renameTable() {
+        String openName = tableModel.openName;
+        File tableFile = new File(openName);
+        DialogNameTable.OnButtonClick buttonClick = (String newName) -> {
+            tableModel.openName = TableFileHelper.renameFile(tableFile, newName + TableFileHelper.TBL);
+            tableModel.setNameTable(newName);
+            activityInterface.updateTableForToolbar(newName);
+        };
+
+        activityInterface.showRenameDialog(tableModel.getNameTable(), buttonClick);
+    }
+
+    public void sendTable() {
+
+        SendTableGetter sendTableGetter = new SendTableGetter() {
+            @Override
+            public File getTableSource() {
+                return new File(tableModel.openName);
+            }
+
+            @Override
+            public File getTablePicture() {
+                File pic = new File(TableFileHelper.getTableFolder(tableModel.openName) + tableModel.getNameTable() + ".png");
+                int width = tableModel.getWidthTable() + tableModel.widthRows;
+                int height = tableModel.getHeightTable() + tableModel.heightColumns;
+
+                Bitmap bitmap = Bitmap.createBitmap(width,
+                        height, Bitmap.Config.ARGB_8888);
+                bitmap.eraseColor(Color.WHITE);
+                Canvas canvas = new Canvas(bitmap);
+
+                Coordinate coordinate = new Coordinate();
+                coordinate.setBounds(0, width, 0, height);
+                cellBuilder.draw(canvas, coordinate, tableModel);
+                rowBuilder.draw(canvas, coordinate, tableModel);
+                columnBuilder.draw(canvas, coordinate, tableModel);
+                lineBuilder.draw(canvas, coordinate, tableModel);
+
+                try {
+                    try (FileOutputStream fos = new FileOutputStream(pic)) {
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 97, fos);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return pic;
+            }
+
+            @Override
+            public File getTableExcel() {
+                File excel = new File(TableFileHelper.getTableFolder(tableModel.openName) + tableModel.getNameTable() + ".xls");
+                Workbook workbook = StaticMethods.getTableExcel(tableModel);
+                try {
+                    workbook.write(new FileOutputStream(excel));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                return excel;
+            }
+        };
+        activityInterface.showSendDialog(sendTableGetter);
+
+
+    }
+
+    public void visibleTotalAmount(boolean visible) {
+        tableModel.setVisibleTotalAmount(visible);
+        Row totalAmount = tableModel.totalAmount;
+        int totalAmountMaxHeight = (int) amountBuilder.getTotalAmountMaxHeight(totalAmount);
+        totalAmount.heightStroke = visible ? totalAmountMaxHeight : 0;
+    }
+
+    public boolean tableIsNull() {
+
+        return tableModel == null;
+    }
+
+    public void setTableModel(TableModel table) {
+        this.tableModel = table;
+        tableModel.totalAmount.height = 70;
+        tableModel.widthRows = (int) rowBuilder.widthHeaders;
+//        initAndUpdate();
+        //
+    }
+
+    public StringBuilder getNameTable() {
+        StringBuilder stringBuilder = new StringBuilder();
+        if (tableModel != null)
+            stringBuilder.append(tableModel.getNameTable());
+        return stringBuilder;
+    }
 
     public enum SelectMode {
         cell,
-        header,
-        column
+        row,
+        column,
+        disable
     }
 }

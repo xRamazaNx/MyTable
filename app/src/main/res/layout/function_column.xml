@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingLeft="4dp"
+    android:paddingEnd="4dp"
+    android:paddingRight="4dp"
+    android:paddingBottom="16dp">
+
+    <TextView
+        android:id="@+id/function_textView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:fadeScrollbars="true"
+        android:minHeight="50dp"
+        android:overScrollMode="ifContentScrolls"
+        android:padding="12dp"
+        android:scrollbars="horizontal"
+        android:scrollHorizontally="true"
+        android:textColor="@color/dark_gray"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/columns"/>
+
+    <TextView
+        android:id="@+id/setting_function"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical|start"
+        android:background="@color/gray_light"
+        android:padding="12dp"
+        android:text="@string/function_setting"
+        android:textColor="@android:color/black"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <HorizontalScrollView
+        android:id="@+id/columns"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/counter_card"
+        android:paddingLeft="2dp"
+        android:paddingRight="2dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/setting_function">
+
+        <LinearLayout
+            android:id="@+id/column_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/edit_custom_value_of_formula"
+                android:layout_width="75dp"
+                android:layout_height="35dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/counter_card"
+                android:ems="10"
+                android:gravity="center"
+                android:hint="@string/custom_value"
+                android:inputType="numberDecimal"
+                android:padding="4dp"
+                android:textSize="14sp"/>
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <LinearLayout
+        android:id="@+id/operands"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/counter_card"
+        android:orientation="horizontal"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/function_textView">
+
+        <ImageButton
+            android:id="@+id/operand_plus"
+            android:layout_width="40dp"
+            android:layout_height="35dp"
+            android:layout_margin="4dp"
+            android:layout_weight="1"
+            android:background="@drawable/counter_card"
+            android:tint="@color/dark_gray"
+            app:srcCompat="@drawable/ic_operand_plus"/>
+
+        <ImageButton
+            android:id="@+id/operand_minus"
+            android:layout_width="40dp"
+            android:layout_height="35dp"
+            android:layout_margin="4dp"
+            android:layout_weight="1"
+            android:background="@drawable/counter_card"
+            android:tint="@color/dark_gray"
+            app:srcCompat="@drawable/ic_operand_minus"/>
+
+        <ImageButton
+            android:id="@+id/operand_multiply"
+            android:layout_width="40dp"
+            android:layout_height="35dp"
+            android:layout_margin="4dp"
+            android:layout_weight="1"
+            android:background="@drawable/counter_card"
+            android:tint="@color/dark_gray"
+            app:srcCompat="@drawable/ic_operand_multiply"/>
+
+        <ImageButton
+            android:id="@+id/operand_divide"
+            android:layout_width="40dp"
+            android:layout_height="35dp"
+            android:layout_margin="4dp"
+            android:layout_weight="1"
+            android:background="@drawable/counter_card"
+            android:tint="@color/dark_gray"
+            app:srcCompat="@drawable/ic_operand_divide"/>
+
+        <TextView
+            android:id="@+id/operand_percent"
+            android:layout_width="40dp"
+            android:layout_height="35dp"
+            android:layout_margin="4dp"
+            android:layout_weight="1"
+            android:background="@drawable/counter_card"
+            android:gravity="center"
+            android:text="%"
+            android:textSize="26sp"/>
+
+        <ImageButton
+            android:id="@+id/operand_back"
+            android:layout_width="40dp"
+            android:layout_height="35dp"
+            android:layout_margin="4dp"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:scaleX="0.8"
+            android:scaleY="0.8"
+            android:tint="@android:color/holo_red_light"
+            app:srcCompat="@drawable/ic_delete_button"/>
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

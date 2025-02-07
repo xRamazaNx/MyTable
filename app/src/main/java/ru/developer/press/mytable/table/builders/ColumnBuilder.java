@@ -8,10 +8,12 @@ import java.util.ArrayList;
 
 import ru.developer.press.myTable.R;
 import ru.developer.press.mytable.helpers.Coordinate;
-import ru.developer.press.mytable.interfaces.RenameColumnListener;
-import ru.developer.press.mytable.table.model.Column;
-import ru.developer.press.mytable.table.model.Header;
-import ru.developer.press.mytable.table.model.TableModel;
+import ru.developer.press.mytable.helpers.StaticMethods;
+import ru.developer.press.mytable.interfaces.table.callback.RenameColumnListener;
+import ru.developer.press.mytable.model.Cell;
+import ru.developer.press.mytable.model.Column;
+import ru.developer.press.mytable.model.Row;
+import ru.developer.press.mytable.model.TableModel;
 
 public class ColumnBuilder extends Builder {
 
@@ -33,65 +35,70 @@ public class ColumnBuilder extends Builder {
 
 
     public void draw(Canvas canvas, Coordinate coordinateDraw, TableModel tableModel) {
-
-        int offX = tableModel.widthHeaders;
-        float heightColumns = tableModel.heightColumns;
-        int strokeSize = tableModel.getHeaders().size();
-
-
-        ArrayList<Column> columnsPref = tableModel.getColumns();
-        int columnsSize = columnsPref.size();
         float coordinateStartX = coordinateDraw.startX;
         float coordinateEndX = coordinateDraw.endX;
         float coordinateStartY = coordinateDraw.startY;
 
+        int offX = tableModel.widthRows;
+        float heightColumns = tableModel.heightColumns;
+        int strokeSize = tableModel.getRows().size();
+
+
+        ArrayList<Column> columnsPref = tableModel.getColumns();
+        int columnsSize = columnsPref.size();
+
+        float colStartX = 0;
+        float colEndX = offX;
+        float colEndY = coordinateStartY + heightColumns;
         for (int i = 0; i < columnsSize; i++) {
             Column column = columnsPref.get(i);
-            float colEndX = column.endX;
-            float colStartX = column.startX;
 
-            if (colEndX < coordinateStartX || colStartX > coordinateEndX)
+            colEndX += column.getWidth();
+            colStartX = colEndX - column.getWidth();
+
+
+            if (colEndX < coordinateStartX)
                 continue;
+            if (colStartX > coordinateEndX)
+                break;
+
             Paint paintBack = column.paintBack;
             // фон
-            canvas.drawRect(colStartX + offX + 1, coordinateStartY,
-                    colEndX + offX, coordinateStartY + heightColumns,
+            canvas.drawRect(colStartX + 1, coordinateStartY,
+                    colEndX, colEndY,
                     paintBack);
 
-            for (int j = 0; j < strokeSize; j++) {
-                boolean isTouched = tableModel.getHeaders().get(j).getCell(i).isTouch;
-                if (isTouched) {
-                    canvas.drawRect(colStartX + offX + 1, coordinateStartY,
-                            colEndX + offX, coordinateStartY + heightColumns,
-                            paintSelectStrokeAColumnGray);
-                    break;
-                }
-            }
             boolean isTouched = column.isTouch;
+            // если выделили
             if (isTouched) {
-                // если выделили
-                canvas.drawRect(colStartX + offX + 1, coordinateStartY,
-                        colEndX + offX, coordinateStartY + heightColumns,
+//                for (int j = 0; j < strokeSize; j++) {
+//                    boolean isTouchedCellToColumn = tableModel.getRows().get(j).getCellAtIndex(i).isTouch;
+//                    if (isTouchedCellToColumn) {
+//                        canvas.drawRect(colStartX + 1, coordinateStartY,
+//                                colEndX, colEndY,
+//                                paintSelectStrokeAColumnGray);
+//                        break;
+//                    }
+//                }
+                canvas.drawRect(colStartX + 1, coordinateStartY,
+                        colEndX, colEndY,
                         paintTouch);
             }
 //            canvas.drawLine(column.endX, 0, column.endX, heightColumns, paintLine);
-            drawText(canvas, column, coordinateDraw, offX);
+            drawText(canvas, column, colStartX, colEndX, coordinateStartY, colEndY);
         }
         // колона нумерации
         canvas.drawRect(coordinateStartX, coordinateStartY,
-                coordinateStartX + offX, coordinateStartY + heightColumns,
+                coordinateStartX + offX, colEndY,
                 paintNumberColumn);
+
 
     }
 
-    private void drawText(Canvas canvas, Column column, Coordinate coordinateDraw, int offX) {
+    private void drawText(Canvas canvas, Column column,
+                          float startX, float endX, float startY, float endY) {
+        column.drawText(canvas, (int) startX, (int) endX, (int) startY, (int) endY);
 
-        int sX = (int) (column.startX + offX);
-
-        int eX = (int) (column.endX + offX);
-        int eY = (int) (column.endY + coordinateDraw.startY);
-
-        column.drawText(canvas, sX, eX, (int) coordinateDraw.startY, eY);
     }
 
 
@@ -108,19 +115,22 @@ public class ColumnBuilder extends Builder {
 
     @Override
     public Coordinate getSelectedCellCoordinate(TableModel tableModel) {
-        int widthHeaders = tableModel.widthHeaders;
+        int widthHeaders = tableModel.widthRows;
         Coordinate coordinate = new Coordinate();
-        coordinate.startX = tableModel.widthTable + tableModel.widthHeaders;
+        coordinate.startX = tableModel.getWidthTable() + tableModel.widthRows;
         coordinate.endX = 0;
-        coordinate.startY = tableModel.heightColumns;
-        coordinate.endY = 0;
+        coordinate.startY = 0;
+        coordinate.endY = tableModel.heightColumns + tableModel.getHeightTable();
 
-        for (Column column: tableModel.getColumns()) {
-            if (column.isTouch){
-                if (coordinate.startX > column.startX + widthHeaders)
-                    coordinate.startX = column.startX + widthHeaders;
-                if (coordinate.endX < column.endX + widthHeaders)
-                    coordinate.endX = column.endX + widthHeaders;
+        ArrayList<Column> columns = tableModel.getColumns();
+        for (int i = 0; i < columns.size(); i++) {
+            Column column = columns.get(i);
+            if (column.isTouch) {
+                Coordinate coordinateCell = tableModel.getCoordinateCell(0, i);
+                if (coordinate.startX > coordinateCell.startX + widthHeaders)
+                    coordinate.startX = coordinateCell.startX + widthHeaders;
+                if (coordinate.endX < coordinateCell.endX + widthHeaders)
+                    coordinate.endX = coordinateCell.endX + widthHeaders;
             }
         }
         return coordinate;
@@ -134,8 +144,9 @@ public class ColumnBuilder extends Builder {
         for (int i = 0; i < tableModel.getColumns().size(); i++) {
             Column column = tableModel.getColumns().get(i);
 
-            int columnStart = (int) column.startX + tableModel.widthHeaders;
-            int columnEnd = (int) column.endX + tableModel.widthHeaders;
+            Coordinate coordinateCell = tableModel.getCoordinateCell(0, i);
+            int columnStart = (int) coordinateCell.startX + tableModel.widthRows;
+            int columnEnd = (int) coordinateCell.endX + tableModel.widthRows;
 
             if (columnStart < endX && columnEnd > startX) {
                 if (selectedCellCoordinate.startX > columnStart)
@@ -143,7 +154,7 @@ public class ColumnBuilder extends Builder {
                 if (selectedCellCoordinate.endX < columnEnd)
                     selectedCellCoordinate.endX = columnEnd;
                 column.select(tableModel);
-                selectColumnCount ++;
+                selectColumnCount++;
             }
         }
         if (selectColumnCount == 1) {
@@ -161,15 +172,8 @@ public class ColumnBuilder extends Builder {
         return selectedCellCoordinate;
     }
 
-    public boolean selectColumn(float x, TableModel tableModel) {
-        int index = 0;
-        for (int i = 0; i < tableModel.getColumns().size(); i++) {
-            Column column = tableModel.getColumns().get(i);
-            if (x - tableModel.widthHeaders <= column.endX) {
-                index = i;
-                break;
-            }
-        }
+    public boolean selectColumn(int index, TableModel tableModel) {
+
         Column column = tableModel.getColumns().get(index);
         if (column.isTouch) {
             return false;
@@ -178,9 +182,13 @@ public class ColumnBuilder extends Builder {
             column.select(tableModel);
             oldIndexColumn = index;
             oldNameColumn = column.text;
-            selectColumnCount ++;
+            selectColumnCount++;
         }
         return true;
+    }
+
+    public void select(Column column) {
+
     }
 
     public Column getSelectColumn(TableModel tableModel) {
@@ -192,23 +200,66 @@ public class ColumnBuilder extends Builder {
         return null;
     }
 
-    public void deleteSelectedColumn(TableModel tableModel) {
-        if (tableModel.getColumns().size() <= selectColumnCount)
-            return;
+
+    public void init(TableModel tableModel) {
         for (int i = 0; i < tableModel.getColumns().size(); i++) {
-            if (tableModel.getColumns().get(i).isTouch) {
-                tableModel.getColumns().remove(i);
-                i--;
+
+            Column column = tableModel.getColumns().get(i);
+            column.width = column.getWidth();
+            column.index = i;
+            float sizeTextTempColumn = column.pref.sizeFont * scaleDp + 0.5F;
+            column.updateCell(sizeTextTempColumn);
+        }
+    }
+
+    public void initColumn(TableModel tableModel, int indexColumn) {
+
+        for (int i = 0; i < tableModel.getRows().size(); i++) {
+
+            Column column = tableModel.getColumns().get(indexColumn);
+            if (i == 0) {
+                column.width = column.getWidth();
+                column.index = indexColumn;
+                float sizeTextTempColumn = column.pref.sizeFont * scaleDp + 0.5F;
+                column.updateCell(sizeTextTempColumn);
+            }
+            Row row = tableModel.getRows().get(i);
+            Cell cell = row.getCellAtIndex(indexColumn);
+            cell.indexColumn = indexColumn;
+            cell.indexRow = i;
+            cell.inputType = column.getInputType();
+            if (column.getInputType() == 2) {
+                if (cell.date > 0)
+                    cell.text = StaticMethods.getDateOfMillis(cell.date, tableModel.getDateType());
+            }
+            if (column.getInputType() == 3) {
+                cell.text = column.getFormula().getValueFromFormula(tableModel, i);
+            }
+
+            float sizeTextTemp = cell.pref.sizeFont * scaleDp + 0.5F;
+            cell.updateCell(sizeTextTemp);
+
+        }
+        initTotalAmountToColumn(tableModel, indexColumn);
+    }
+
+    public void updateHeightColumn(TableModel tableModel) {
+        float height = 0;
+
+        for (Column column : tableModel.getColumns()) {
+            float textSize = column.pref.sizeFont * scaleDp + 0.5F;
+            column.updateCell(textSize);
+            float temp = column.getStaticHeight();
+
+            if (height < temp) {
+                height = temp;
             }
         }
-        for (Header header : tableModel.getHeaders()) {
-            for (int i = 0; i < header.getCells().size(); i++) {
-                if (header.getCell(i).isTouch) {
-                    header.getCells().remove(i);
-                    i--;
-                }
-            }
-        }
-        selectColumnCount = 0;
+
+        float minColumnHeight = 28 * scaleDp;
+        if (height < minColumnHeight)
+            height = minColumnHeight; //  если высота слишком маленькая то 28 дп
+
+        tableModel.heightColumns = (int) height;
     }
 }

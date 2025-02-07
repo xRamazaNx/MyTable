@@ -1,16 +1,15 @@
 package ru.developer.press.mytable;
 
-import android.Manifest;
 import android.app.Activity;
 import android.app.DatePickerDialog;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import android.text.Editable;
 import android.text.InputType;
-import android.text.TextWatcher;
+import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -33,27 +32,33 @@ import android.widget.Toast;
 
 import net.yslibrary.android.keyboardvisibilityevent.KeyboardVisibilityEvent;
 
-import java.io.File;
 import java.util.Calendar;
 
+import ru.developer.press.myTable.R;
 import ru.developer.press.mytable.dialogs.DateVariableDialog;
+import ru.developer.press.mytable.dialogs.DialogNameTable;
+import ru.developer.press.mytable.dialogs.FormulaDialog;
+import ru.developer.press.mytable.dialogs.SendTableDialog;
+import ru.developer.press.mytable.helpers.AppEvents;
+import ru.developer.press.mytable.helpers.BottomMenuControl;
 import ru.developer.press.mytable.helpers.Coordinate;
+import ru.developer.press.mytable.helpers.PrefsCellLayoutSetting;
 import ru.developer.press.mytable.helpers.StaticMethods;
-import ru.developer.press.mytable.helpers.TableViewCoordinate;
-import ru.developer.press.mytable.interfaces.PrefCellsListener;
-import ru.developer.press.mytable.interfaces.SettingTableListener;
-import ru.developer.press.mytable.interfaces.TableActivityInterface;
-import ru.developer.press.mytable.interfaces.UpdateHeight;
-import ru.developer.press.mytable.interfaces.UpdateWidth;
-import ru.developer.press.mytable.table.model.Column;
 import ru.developer.press.mytable.helpers.TableLab;
-import ru.developer.press.mytable.table.model.TableModel;
+import ru.developer.press.mytable.interfaces.SendTableGetter;
+import ru.developer.press.mytable.interfaces.TaskListener;
+import ru.developer.press.mytable.interfaces.table.TableActivityInterface;
+import ru.developer.press.mytable.interfaces.table.TableScroller;
+import ru.developer.press.mytable.interfaces.table.callback.DateVariableChangeListener;
+import ru.developer.press.mytable.interfaces.table.callback.DialogShowListener;
+import ru.developer.press.mytable.interfaces.table.callback.FormulaMakeListener;
+import ru.developer.press.mytable.interfaces.table.callback.PrefCellsListener;
+import ru.developer.press.mytable.interfaces.table.callback.SettingTableListener;
+import ru.developer.press.mytable.interfaces.table.callback.UpdateHeight;
+import ru.developer.press.mytable.interfaces.table.callback.WidthListener;
+import ru.developer.press.mytable.model.TableModel;
 import ru.developer.press.mytable.table.TablePresenter;
 import ru.developer.press.mytable.table.views.TableView;
-import ru.developer.press.myTable.R;
-import ru.developer.press.mytable.interfaces.TableScroller;
-import ru.developer.press.mytable.helpers.BottomMenuControl;
-import ru.developer.press.mytable.helpers.PrefsCellLayoutSetting;
 
 import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
@@ -61,7 +66,7 @@ import static android.view.View.VISIBLE;
 public class TableActivity extends AppCompatActivity implements TableActivityInterface, View.OnClickListener, TableScroller {
 
     private static final String TAG = "test";
-    private long deley_scroll = 150;
+    private long delay_scroll = 150;
     private TablePresenter tablePresenter;
     private Toolbar toolbar;
     private Menu mMenu;
@@ -70,8 +75,6 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
     private TableView tableView;
 
     private LinearLayout editCellWindow;
-    private FrameLayout ok;
-    private FrameLayout clearText;
     private EditText editText;
     private TextView dateTextView;
 
@@ -82,7 +85,8 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
     private Animation animOpen;
     private boolean isRenameButtonAdded = true;
     private boolean isAnim;
-    private int offsetScroll;
+    private int dpToPixels;
+    private boolean blockEditText;
 
 //    public int getStatusBarHeight() {
 //        int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
@@ -95,8 +99,8 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        dpToPixels = StaticMethods.convertDpToPixels(10, this);
         setContentView(R.layout.activity_table);
-        offsetScroll = StaticMethods.convertDpToPixels(4, this);
 
         animOpen = AnimationUtils.loadAnimation(this, R.anim.edit_cell_show);
         animClose = AnimationUtils.loadAnimation(this, R.anim.edit_cell_hide);
@@ -128,6 +132,8 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
                 editText.clearFocus();
                 editCellWindow.setVisibility(GONE);
                 isAnim = false;
+                // показываем строку тоталамонт после закрытия окна ввода
+                tablePresenter.visibleTotalAmount(true);
             }
 
             @Override
@@ -135,22 +141,11 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
 
             }
         });
-        init();
-
-        String path = getIntent().getStringExtra(MainActivity.TABLE_ACTIVITY_KEY);
-        TableModel table = TableLab.get(this).getTableForFile(new File(path));
-        table.openName = path;
-
-        String nameTable = table.getNameTable();
-
-        tablePresenter = TablePresenter.get(this, table);
-        nameTableToolBar.setText(nameTable);
-
 
         KeyboardVisibilityEvent.setEventListener(this,
                 isOpen -> {
                     isOpenKeyboard = isOpen;
-                    tablePresenter.openKeyboardEvent(isOpenKeyboard);
+                    tablePresenter.openKeyboardEvent(isOpen);
                     if (isOpen) {
                         hideToolbar();
                         bottomMenu.setVisibility(GONE);
@@ -162,57 +157,97 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
                 });
     }
 
-    private boolean permissionCheck() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            int perm = checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-            if (perm != PackageManager.PERMISSION_GRANTED) {
-                if (shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                    Toast.makeText(getApplicationContext(), "Включите разрешение памяти в настройках приложения"
-                            , Toast.LENGTH_SHORT).show();
-                    return false;
-                } else {
-                    requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 416);
-                    return false;
-                }
+    @Override
+    protected void onStart() {
+        tablePresenter = TablePresenter.get(this);
+        init();
+
+        DisplayMetrics displaymetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+
+        String path = getIntent().getStringExtra(MainActivity.TABLE_ACTIVITY_KEY);
+        StringBuilder nameTable = tablePresenter.getNameTable();
+        StaticMethods.getBackTask(new TaskListener() {
+//            AlertDialog builder = new AlertDialog.Builder(TableActivity.this).create();
+
+            @Override
+            public void preExecute() {
+                AppEvents.get().startOpenTable();
+//                if (tablePresenter.tableIsNull()) {
+//                    builder.setTitle(" загрузка идет если что");
+//                    builder.show();
+//                }
             }
-        }
-        return true;
+
+            @Override
+            public void doOnBackground() {
+                if (tablePresenter.tableIsNull()) {
+                    TableModel table = TableLab.get(TableActivity.this).getTableForFile(path);
+                    table.openName = path;
+                    table.setWidthView(displaymetrics.widthPixels);
+                    nameTable.append(table.getNameTable());
+                    tablePresenter.setTableModel(table);
+                }
+                if (tablePresenter == null)
+                    return;
+                tableView.setTableListener(tablePresenter);
+                tablePresenter.setInterfaces(TableActivity.this);
+                tablePresenter.initAndUpdate();
+
+            }
+
+            @Override
+            public void main() {
+                // проверка находились ли мы в каком ни будь режиме или нет
+                tableView.postDelayed(() -> tablePresenter.resume(), 70);
+//                if (builder.isShowing())
+//                    builder.dismiss();
+                nameTableToolBar.setText(nameTable.toString());
+                invalidate();
+
+            }
+        });
+//        invalidate();
+        super.onStart();
     }
 
     @Override
-    protected void onStart() {
-        super.onStart();
-        tablePresenter.setInterfaces(this);
-        tableView.setTableListener(tablePresenter);
-        bottomMenuControlBM.setAddButtonListener(tablePresenter);
-        // проверка находились ли мы в каком ни будь режиме или нет
-        tableView.postDelayed(() -> tablePresenter.resume(), 100);
-        invalidate();
+    protected void onPause() {
+        AppEvents.get().openTableFinish();
+        AppEvents appEvents = AppEvents.get();
+        if (!appEvents.isSaveStart())
+            tablePresenter.updateTable(TableActivity.this);
+        super.onPause();
     }
-
 
     @Override
     protected void onStop() {
-        super.onStop();
 
-        tablePresenter.updateTable(this);
 
         tableView.setTableListener(null);
         //поставил по очереди последним потому что остальные листенеры зависят от него, он их листенер
         tablePresenter.setInterfaces(null);
         bottomMenuControlBM.setAddButtonListener(null);
+        super.onStop();
     }
 
     @Override
     public void finish() {
-        tablePresenter.destroyed(this);
+        tablePresenter.destroyed();
         super.finish();
     }
 
     @Override
     public void onBackPressed() {
-        if (!tablePresenter.defaultState())
-            super.onBackPressed();
+        if (!tablePresenter.tableIsNull()) {
+            if (!tablePresenter.defaultState()) {
+//                AppEvents appEvents = AppEvents.get();
+//                if (!appEvents.isStartOpenTable()) {
+//                    tablePresenter.updateTable(TableActivity.this);
+//                }
+                super.onBackPressed();
+            }
+        }
     }
 
     @Override
@@ -241,6 +276,12 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
                 if (!tablePresenter.deleteStroke())
                     Toast.makeText(this, R.string.not_delete_all_cells, Toast.LENGTH_SHORT).show();
                 break;
+            case R.id.send:
+                tablePresenter.sendTable();
+                break;
+            case R.id.rename:
+                tablePresenter.renameTable();
+                break;
             case R.id.undo:
                 tablePresenter.undo();
                 break;
@@ -263,8 +304,8 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
         tableView = findViewById(R.id.table_view);
 
         editCellWindow = findViewById(R.id.include_edit_cell);
-        ok = findViewById(R.id.ok_edit_cell_button_frame);
-        clearText = findViewById(R.id.clear_edit_cell_button_frame);
+        FrameLayout ok = findViewById(R.id.ok_edit_cell_button_frame);
+        FrameLayout clearText = findViewById(R.id.clear_edit_cell_button_frame);
         editText = findViewById(R.id.edit_cell_in_table);
         dateTextView = findViewById(R.id.textview_cell_in_table);
         bottomMenu = findViewById(R.id.bottom_menu);
@@ -280,51 +321,44 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
         ok.setOnClickListener(this);
         dateTextView.setOnClickListener(this);
         clearText.setOnClickListener(this);
-        editText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                tablePresenter.setText(s.toString());
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-            }
-        });
+        TextWatcher textWatcher = new TextWatcher();
+        editText.addTextChangedListener(textWatcher);
 
     }
 
     @Override
     public void showEditCellWindow(final int typeCell, final String text) {
-        final boolean isDate = typeCell == 2;
+        if (typeCell == 2) {
+            hideKeyboard();
+            dateTextView.setVisibility(VISIBLE);
+            dateTextView.setText(text);
+            editText.setVisibility(GONE);
+        } else {
+            long start = System.currentTimeMillis();
+            blockEditText = true; // блокировать отправку данных из едит текст обратно в презентер
+            editText.setText(text);
+            blockEditText = false;
+            editText.setVisibility(VISIBLE);
+            dateTextView.setVisibility(GONE);
+            editText.setFocusableInTouchMode(true);
+            editText.setSelection(text.length());
+            Log.d(TAG, "selectZone: " + (System.currentTimeMillis() - start));
+            if (typeCell == 1 || typeCell == 3) {
+                editText.setInputType(InputType.TYPE_CLASS_PHONE);
+            } else
+                editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+
+        }
         tableView.postDelayed(() -> {
             // показывать окно
             if (!isVisibleEditWindow()) {
                 // чтоб скролилось после появления окна
-                deley_scroll = animOpen.getDuration() + 50;
+                delay_scroll = animOpen.getDuration() + 50;
                 editCellWindow.setVisibility(VISIBLE);
                 editCellWindow.startAnimation(animOpen);
-            }
-            if (isDate) {
-                hideKeyboard();
-                dateTextView.setVisibility(VISIBLE);
-                dateTextView.setText(text);
-                editText.setVisibility(GONE);
-            } else {
-                editText.setVisibility(VISIBLE);
-                editText.setText(text);
-                dateTextView.setVisibility(GONE);
-
-                if (typeCell == 1) {
-                    editText.setInputType(InputType.TYPE_CLASS_NUMBER);
-                } else {
-                    editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-                    editText.setSelection(text.length());
-                }
+                //скрываем тоталамонт при старте анимации окна ввода
+                tablePresenter.visibleTotalAmount(false);
             }
         }, 10); // специально сделали через пост на 10 мл чтоб анимация инициализировалась и isAnim задался значением нужным для проверок
     }
@@ -333,29 +367,63 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
     public void hideEditCellWindow() {
 
         if (isVisibleEditWindow()) {
-            deley_scroll = animClose.getDuration() + 50;
+            delay_scroll = animClose.getDuration() + 50;
             editCellWindow.startAnimation(animClose);
             hideKeyboard();
+            //
         }
     }
 
     @Override
-    public void showRenameColumnWin(final Column column) {
-        showEditCellWindow(0, column.text);
-//        setText(column.getName());
-
-    }
-
-    @Override
-    public void showEditHeightCellsWin(View view, int heightCells, final UpdateHeight updateHeight) {
+    public void showEditHeightCells(int heightCells, final UpdateHeight updateHeight) {
         FrameLayout frameLayout = (FrameLayout) LayoutInflater.from(this).inflate(R.layout.heigh_seek, null);
         SeekBar seekBar = frameLayout.findViewById(R.id.seekBar_height_cell);
-        seekBar.setProgress(heightCells - 10);
+
+        final ImageButton up = frameLayout.findViewById(R.id.up_height);
+        TaskListener taskUpHeight = new TaskListener() {
+            @Override
+            public void preExecute() {
+
+            }
+
+            @Override
+            public void doOnBackground() {
+            }
+
+            @Override
+            public void main() {
+                seekBar.setProgress(seekBar.getProgress() - 1);
+                updateHeight.stopTracking();
+
+            }
+        };
+        up.setOnClickListener(v -> StaticMethods.getBackTask(taskUpHeight));
+
+        final ImageButton down = frameLayout.findViewById(R.id.down_height);
+        TaskListener taskDownHeight = new TaskListener() {
+            @Override
+            public void preExecute() {
+
+            }
+
+            @Override
+            public void doOnBackground() {
+            }
+
+            @Override
+            public void main() {
+                seekBar.setProgress(seekBar.getProgress() + 1);
+                updateHeight.stopTracking();
+            }
+        };
+        down.setOnClickListener(v -> StaticMethods.getBackTask(taskDownHeight));
+
+        seekBar.setProgress(heightCells - dpToPixels);
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                updateHeight.setHeight(seekBar.getProgress() + 10);
+                updateHeight.setHeight(progress + dpToPixels);
             }
 
             @Override
@@ -371,7 +439,9 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
 
         final PopupWindow heightWindow = StaticMethods.createPopupWindow(frameLayout, FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
 
-        heightWindow.showAtLocation(view, Gravity.START | Gravity.BOTTOM, 40, view.getHeight());
+        heightWindow.showAtLocation(bottomMenu, Gravity.START | Gravity.BOTTOM,
+                0, bottomMenu.getHeight());
+//        heightWindow.showAsDropDown(bottomMenu);
         heightWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
             @Override
             public void onDismiss() {
@@ -381,22 +451,64 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
     }
 
     @Override
-    public void showEditWidthCellsWin(View view, final UpdateWidth updateWidth) {
+    public void showEditWidthCells(int widthHeader, final WidthListener widthListener) {
         FrameLayout frameLayout = (FrameLayout) LayoutInflater.from(this).inflate(R.layout.width_seek, null);
+        final PopupWindow widthWindow = StaticMethods.createPopupWindow(frameLayout, FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+
         final SeekBar seekBar = frameLayout.findViewById(R.id.seekBar_height_cell);
         final ImageButton widthForScreen = frameLayout.findViewById(R.id.width_for_screen_button);
         widthForScreen.setOnClickListener(v -> {
-            updateWidth.setWidthForScreen(tableView.getWidth());
-            seekBar.setProgress(updateWidth.getGeneralWidth() - 10);
+            widthListener.setWidthForScreen();
             widthForScreen.startAnimation(AnimationUtils.loadAnimation(TableActivity.this, R.anim.click_anim));
+            widthWindow.dismiss();
+//            seekBar.setProgress(widthListener.getGeneralWidth() - dpToPixels);
         });
+
+        final ImageButton right = frameLayout.findViewById(R.id.right_width);
+        TaskListener taskUpWidth = new TaskListener() {
+            @Override
+            public void preExecute() {
+            }
+
+            @Override
+            public void doOnBackground() {
+                seekBar.setProgress(seekBar.getProgress() + 1);
+                widthListener.stopTracking();
+
+            }
+
+            @Override
+            public void main() {
+            }
+        };
+        right.setOnClickListener(v -> StaticMethods.getBackTask(taskUpWidth));
+
+        final ImageButton left = frameLayout.findViewById(R.id.left_width);
+        TaskListener taskDownWidth = new TaskListener() {
+            @Override
+            public void preExecute() {
+            }
+
+            @Override
+            public void doOnBackground() {
+                seekBar.setProgress(seekBar.getProgress() - 1);
+                widthListener.stopTracking();
+
+            }
+
+            @Override
+            public void main() {
+            }
+        };
+        left.setOnClickListener(v -> StaticMethods.getBackTask(taskDownWidth));
+
         seekBar.setMax(tableView.getWidth());
-        seekBar.setProgress(updateWidth.getGeneralWidth() - 10);
+        seekBar.setProgress(widthListener.getGeneralWidth() - dpToPixels);
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                updateWidth.setWidthCell(progress - updateWidth.getGeneralWidth() + 10); // на сколько сдвинулось
+                widthListener.setWidthCell(progress - widthListener.getGeneralWidth() + dpToPixels); // на сколько сдвинулось
             }
 
             @Override
@@ -406,22 +518,34 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                updateWidth.stopTracking();
+                widthListener.stopTracking();
             }
         });
 
-        final PopupWindow widthWindow = StaticMethods.createPopupWindow(frameLayout, FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
 
-        widthWindow.showAtLocation(view, Gravity.CENTER | Gravity.BOTTOM, 0, view.getHeight());
+        widthWindow.showAtLocation(bottomMenu, Gravity.START | Gravity.BOTTOM,
+                widthHeader, bottomMenu.getHeight());
+        widthWindow.setOnDismissListener(widthListener::onDismiss);
 
-        widthWindow.setOnDismissListener(updateWidth::onDismiss);
     }
 
     @Override
-    public void showSettingCellWin(final PrefCellsListener prefCells) {
+    public void showSettingCell(final PrefCellsListener prefCells) {
         LinearLayout layout = (LinearLayout) LayoutInflater.from(this).inflate(R.layout.cell_prefs_layout, null);
         // тут настраиваются все кнопки в окне настройки столбцов
-        new PrefsCellLayoutSetting(layout, prefCells);
+        new PrefsCellLayoutSetting(layout, prefCells, new DialogShowListener() {
+            @Override
+            public void showFormulaDialog(FormulaMakeListener formulaMakeListener) {
+                FormulaDialog formulaDialog = FormulaDialog.get(prefCells.formula, formulaMakeListener);
+                formulaDialog.show(TableActivity.this.getSupportFragmentManager(), "formulaDialog");
+            }
+
+            @Override
+            public void showDateCheckDialog(int variable, DateVariableChangeListener dateVariableChangeListener) {
+                DateVariableDialog dateDialog = DateVariableDialog.get(variable, dateVariableChangeListener);
+                dateDialog.show(getSupportFragmentManager(), "dateVariable");
+            }
+        });
         PopupWindow popupWindow = StaticMethods.createPopupWindow(layout, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         popupWindow.showAtLocation(layout, Gravity.BOTTOM, 0, 0);
         // если нажали в не окна
@@ -429,7 +553,7 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
     }
 
     @Override
-    public void showDatePickerWin(long date) {
+    public void showDatePicker(long date) {
         final Calendar calendar = Calendar.getInstance();
         if (date > 0)
             calendar.setTimeInMillis(date);
@@ -447,64 +571,25 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
     }
 
     @Override
-    public void showSettingTableWin(final SettingTableListener setting) {
+    public void showSettingTable(final SettingTableListener setting) {
         LinearLayout layout = (LinearLayout) LayoutInflater.from(this).inflate(R.layout.setting_table, null);
         Switch lockHeight = layout.findViewById(R.id.fixed_height_switch);
-        TextView dateVar = layout.findViewById(R.id.date_variable);
-        dateVar.setOnClickListener(v -> {
-            DateVariableDialog dateDialog = DateVariableDialog.get(setting.variable, setting::setDateVariable);
-            dateDialog.show(getSupportFragmentManager(), "dateVariable");
-        });
         lockHeight.setChecked(setting.lockHeight);
         lockHeight.setOnCheckedChangeListener((buttonView, isChecked) -> setting.setLockHeight(isChecked));
+        Switch lockWidthFitScreen = layout.findViewById(R.id.always_fit_to_screen_width);
+        lockWidthFitScreen.setChecked(setting.lockAlwaysFitToScreen);
+        lockWidthFitScreen.setOnCheckedChangeListener((buttonView, isChecked) -> setting.setLockAlwaysFitToScreen(isChecked));
+
+        Switch totalAmount = layout.findViewById(R.id.total_amount);
+        totalAmount.setChecked(setting.totalAmountEnable);
+        totalAmount.setOnCheckedChangeListener((buttonView, isChecked) -> setting.setTotalAmountEnable(isChecked));
 
         PopupWindow popupWindow = StaticMethods.createPopupWindow(layout, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         popupWindow.showAtLocation(layout, Gravity.BOTTOM, 0, 0);
         // если нажали в не окна
         popupWindow.setOnDismissListener(() -> {
-
+            // ну может надо будет
         });
-    }
-
-    @Override
-    public void scrollToSelector(float xTouch, float yTouch, float widthTable, float heightTable, int widthHeader, int heightColumn) {
-
-        int x = (int) xTouch - widthHeader;
-        int y = (int) yTouch - heightColumn;
-        int scrollValue = offsetScroll * 2;
-
-        int endScreenX = tableView.getScrollX() + tableView.getWidth();
-        int endScreenY = tableView.getScrollY() + tableView.getHeight();
-
-        //проверяем точка касания находится в левом краю таблицы
-        if (x < tableView.getScrollX() + scrollValue)
-            x = -scrollValue;
-            // проверяем точка касания находится в правом краю экрана
-            // добавляем ранее отнятую величину ширины хеадеров
-        else if (x + widthHeader > endScreenX - scrollValue) {
-            x = scrollValue;
-        } else x = 0;
-
-        // проверяем точка касания в верху таблицы (под заголовками)
-        if (y < tableView.getScrollY() + scrollValue)
-            y = -scrollValue;
-            // проверяем точка касания находится в нижней части таблицы
-            // возвращаем ранее отнятую величину высоты заголовков колон
-        else if (y + heightColumn > endScreenY - scrollValue)
-            y = scrollValue;
-        else y = 0;
-
-        // если в итоге прибавленная величина к скролингу приводит к смещению таблицы за границы то х = 0
-        if (endScreenX + scrollValue > widthTable
-                || xTouch - scrollValue - widthHeader < 0)
-            x = 0;
-
-        // тут та же беда
-        if (endScreenY + scrollValue > heightTable
-                || yTouch - scrollValue - heightColumn < 0)
-            y = 0;
-
-        tableView.scrollBy(x, y);
     }
 
     @Override
@@ -515,16 +600,35 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
 
 
     }
+//
+//    @Override
+//    public int getTableWidth() {
+//        return tableView.getWidth();
+//    }
 
     @Override
-    public TableViewCoordinate getTableViewCoordinate() {
-        TableViewCoordinate viewCoordinate = new TableViewCoordinate();
-        viewCoordinate.scrollX = tableView.getScrollX();
-        viewCoordinate.scrollY = tableView.getScrollY();
-        viewCoordinate.width = tableView.getWidth();
-        viewCoordinate.height = tableView.getHeight();
-        return viewCoordinate;
+    public void updateTableForToolbar(String newName) {
+        nameTableToolBar.setText(newName);
     }
+
+    @Override
+    public void showRenameDialog(String name, DialogNameTable.OnButtonClick buttonClick) {
+        DialogNameTable nameTable = DialogNameTable.getDialog(name, buttonClick);
+        nameTable.showNow(getSupportFragmentManager(), "name_table");
+    }
+
+    @Override
+    public void showSendDialog(SendTableGetter sendTableGetter) {
+        SendTableDialog sendTableDialog = SendTableDialog.get(sendTableGetter);
+        sendTableDialog.show(getSupportFragmentManager(), "send");
+    }
+
+    @Override
+    public void tableOpened() {
+        // пусть кнопки работают тогда когда таблица открыта
+        bottomMenuControlBM.setAddButtonListener(tablePresenter);
+    }
+
 
     private boolean isVisibleEditWindow() {
 
@@ -541,7 +645,7 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
     }
 
     private void showToolbar() {
-        toolbar.setAnimation(AnimationUtils.loadAnimation(this, R.anim.toolbar_show));
+//        toolbar.setAnimation(AnimationUtils.loadAnimation(this, R.anim.toolbar_show));
         toolbar.setVisibility(VISIBLE);
     }
 
@@ -579,16 +683,14 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
     }
 
     @Override
-    public void showMenuOfHeaders(boolean isEditHeader) {
-        if (isEditHeader) {
-            showToolbar();
-            mMenu.clear();
-            getMenuInflater().inflate(R.menu.header_menu, mMenu);
-            getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_galochka_norm);
-            bottomMenuControlBM.showAddButtonOfStroke();
+    public void showMenuOfHeaders() {
+        showToolbar();
+        mMenu.clear();
+        getMenuInflater().inflate(R.menu.header_menu, mMenu);
+        getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_galochka_norm);
+        bottomMenuControlBM.showAddButtonOfStroke();
 
-            hideKeyboard();
-        }
+        hideKeyboard();
     }
 
     @Override
@@ -617,6 +719,9 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
                 break;
             case R.id.clear_edit_cell_button_frame:
                 tablePresenter.clearText();
+                blockEditText = true;
+                editText.setText("");
+                blockEditText = false;
                 break;
             case R.id.textview_cell_in_table:
                 tablePresenter.getDatePick();
@@ -627,171 +732,213 @@ public class TableActivity extends AppCompatActivity implements TableActivityInt
         }
     }
 
-    //методы скроллинга
     @Override
-    public void scrollTableBy(float distanceX, float distanceY, int tableWidth, int tableHeight) {
-
-        int x = (int) distanceX;
-        int y = (int) distanceY;
-
-        int xOff = -tableView.getScrollX(), // точка отчета координат таблицы
-                yOff = -tableView.getScrollY();
-
-        if (xOff <= 0) { // если по горизонтали таблица ушла влево
-            int ostatok = tableWidth - -xOff;
-            // это остаток таблицы с правой стороны за границой
-            int posleOstatka = ostatok - tableView.getWidth();
-
-            if (x > posleOstatka) { // если рывок по х будет больше чем остаток таблицы за гранями
-                x = posleOstatka;
-            }
-            if (x < xOff) x = xOff; // если рывок меньще чем координаты начала таблицы
-
-        } else {
-            x = 0;
-        }
-
-        // тут аналогично
-        if (yOff <= 0) {
-            int ostatok = tableHeight - -yOff;
-            int posleOstatka = ostatok - tableView.getHeight();
-
-            if (y > posleOstatka) {
-                y = posleOstatka;
-            }
-            if (y < yOff) y = yOff;
-        } else y = 0;
-
-        tableView.scrollBy(x, y);
-    }
-
-    @Override
-    public void scrollTableTo(int x, int y) {
-        tableView.scrollTo(x, y);
-    }
-
-    @Override
-    public void scrollToCell(final Coordinate coordinate, int widthHeaders, int heightColumns) {
+    public void scrollToCell(final Coordinate cellCoordinate) {
         tableView.postDelayed(() -> {
-            int scrollX = tableView.getScrollX();
-            int scrollY = tableView.getScrollY();
-
-            int xPosition = (int) (coordinate.startX - widthHeaders - scrollX); //позиция старт х у ячейки относительно экрана (если вышла за экран в лево значит придет на место
-
-            if (xPosition > 0) {// если позиция стартХ не вышла с левой стороны
-                int endX = (int) (coordinate.endX - scrollX - tableView.getWidth()); // то работаем с позицией ендХ
-                if (endX > 0) { // если позиция ендХ вышла за предела экрана с правой стороны
-                    xPosition = endX; // присваимаев это значение для перехода на место
-                } else
-                    xPosition = 0; // если ни позиция стартХ и ендХ не вышли за свои края, то ни куда не скролимся
-            }
-
-            // по у суета
-            int yPosition = (int) (coordinate.endY - tableView.getHeight() - scrollY); // значение y для скролинга
-
-            if (yPosition < 0) {// если нижняя часть ячейки выше нижней части экрана
-                if (coordinate.startY - heightColumns - scrollY < 0) {// проверяем стартУ не ушел за экран вверх
-                    yPosition = (int) (coordinate.startY - heightColumns - scrollY) - 2;// если так то позиция скроллинга меняется чтоб вернуть из за экрана вниз
-                } else // если все эти условия не выполняются значит ячейка по У не вышла за границы
-                    yPosition = 0;
-            }
-
-            // манипуляции для правильного отображения синей полоски (наверно)
-            ;
-            if (coordinate.startX - widthHeaders > 1)
-                if (xPosition < 0) {
-                    xPosition -= offsetScroll;
-                } else if (xPosition > 0) {
-                    xPosition += offsetScroll;
-                }
-
-            if (coordinate.startY - heightColumns > 1) {
-                if (yPosition < 0)
-                    yPosition -= offsetScroll;
-                else if (yPosition > 0)
-                    yPosition += offsetScroll;
-            }
-
-            tableView.scroller.startScroll(scrollX, scrollY, xPosition, yPosition, 350);
-            invalidate();
-            deley_scroll = 150; // задержку меняю для того что бы подождать пока закроется окно ввода
-        }, deley_scroll);
-    }
-
-    @Override
-    public void scrollToColumn(Coordinate coordinate) {
-        tableView.postDelayed(() -> {
-
-            float startX = coordinate.startX;
-            int scrollX = tableView.getScrollX();
+//            float scrollX = tableView.getScrollX();
+//            float scrollY = tableView.getScrollY();
+//            float scale = tableView.mScaleFactor;
+//
+//            int xPosition = (int) (cellCoordinate.startX * scale - widthHeaders * scale - scrollX); //позиция старт х у ячейки относительно экрана (если вышла за экран в лево значит придет на место
+//
+//            if (xPosition > 0) {// если позиция стартХ не вышла с левой стороны
+//                int endX = (int) (cellCoordinate.endX * scale - scrollX - tableView.getWidth()); // то работаем с позицией ендХ
+//                if (endX > 0) { // если позиция ендХ вышла за предела экрана с правой стороны
+//                    xPosition = endX; // присваимаев это значение для перехода на место
+//                } else
+//                    xPosition = 0; // если ни позиция стартХ и ендХ не вышли за свои края, то ни куда не скролимся
+//            }
+//
+//            // по у суета
+//            int yPosition = (int) (cellCoordinate.endY * scale - tableView.getHeight() - scrollY); // значение y для скролинга
+//
+//            if (yPosition < 0) {// если нижняя часть ячейки выше нижней части экрана
+//                if (cellCoordinate.startY * scale - heightColumns * scale - scrollY < 0) {// проверяем стартУ не ушел за экран вверх
+//                    yPosition = (int) (cellCoordinate.startY * scale - heightColumns * scale - scrollY) - 2;// если так то позиция скроллинга меняется чтоб вернуть из за экрана вниз
+//                } else // если все эти условия не выполняются значит ячейка по У не вышла за границы
+//                    yPosition = 0;
+//            }
+//
+//            // манипуляции для правильного отображения синей полоски (наверно)
+//            ;
+//            if (cellCoordinate.startX * scale - widthHeaders * scale > 1)
+//                if (xPosition < 0) {
+//                    xPosition -= offsetScroll;
+//                } else if (xPosition > 0) {
+//                    xPosition += offsetScroll;
+//                }
+//
+//            if (cellCoordinate.startY * scale - heightColumns * scale > 1) {
+//                if (yPosition < 0)
+//                    yPosition -= offsetScroll;
+//                else if (yPosition > 0)
+//                    yPosition += offsetScroll;
+//            }
+            Coordinate coordinate = tableView.getCoordinate();
             float endX = coordinate.endX;
+            float startX = coordinate.startX;
+            float endXCol = cellCoordinate.endX;
+            float startXCol = cellCoordinate.startX;
+            // надо вверх скролить
+            int xPosition = endXCol > endX ? (int) (endXCol - endX) : 0; // значение для скролинга
+            // если надо вниз скролить
+            if (xPosition == 0)
+                xPosition = startX > startXCol ? (int) -(startX - startXCol) : 0;
 
-            int scrollStartX = (int) (startX - scrollX); //позиция старт х у ячейки относительно экрана (если вышла за экран в лево значит придет на место
-            if (scrollStartX > 0) {// если позиция стартХ не вышла с левой стороны
-                int scrollEndX = (int) (endX - scrollX - tableView.getWidth()); // то работаем с позицией ендХ
-                if (scrollEndX > 0) { // если позиция ендХ вышла за предела экрана с правой стороны
-                    scrollStartX = scrollEndX; // присваимаев это значение для перехода на место
-                } else
-                    scrollStartX = 0; // если ни позиция стартХ и ендХ не вышли за свои края, то ни куда не скролимся
-            }
-            if (startX > 0 && scrollStartX < 0)
-                scrollStartX--;
-            tableView.scroller.startScroll(scrollX, tableView.getScrollY(), scrollStartX, 0, 350);
+            float endY = coordinate.endY;
+            float startY = coordinate.startY;
+            float endYRow = cellCoordinate.endY;
+            float startYRow = cellCoordinate.startY;
+            // надо вверх скролить
+            int yPosition = endYRow > endY ? (int) (endYRow - endY) : 0; // значение для скролинга
+            // если надо вниз скролить
+            if (yPosition == 0)
+                yPosition = startY > startYRow ? (int) -(startY - startYRow) : 0;
+
+            float mScaleFactor = tableView.mScaleFactor;
+            tableView.scroller.startScroll(tableView.getScrollX(), tableView.getScrollY(), (int) (xPosition * mScaleFactor), (int) (yPosition * mScaleFactor), 350);
             invalidate();
-            deley_scroll = 150; // задержку меняю для того что бы подождать пока закроется окно ввода
-        }, deley_scroll);
+            delay_scroll = 150; // задержку меняю для того что бы подождать пока закроется окно ввода
+        }, delay_scroll);
     }
 
     @Override
-    public void scrollToStroke(final Coordinate header) {
+    public void scrollToColumn(Coordinate column) {
+        tableView.postDelayed(() -> {
+//            float scale = tableView.mScaleFactor;
+//            float startX = column.startX * scale;
+//            int scrollX = tableView.getScrollX();
+//            float endX = column.endX * scale;
+//
+//
+//            int scrollStartX = (int) (startX - scrollX); //позиция старт х у ячейки относительно экрана (если вышла за экран в лево значит придет на место
+//            if (scrollStartX > 0) {// если позиция стартХ не вышла с левой стороны
+//                int scrollEndX = (int) (endX - scrollX - tableView.getWidth()); // то работаем с позицией ендХ
+//                if (scrollEndX > 0) { // если позиция ендХ вышла за предела экрана с правой стороны
+//                    scrollStartX = scrollEndX; // присваимаев это значение для перехода на место
+//                } else
+//                    scrollStartX = 0; // если ни позиция стартХ и ендХ не вышли за свои края, то ни куда не скролимся
+//            }
+//            if (startX > 0 && scrollStartX < 0)
+//                scrollStartX--;
+            Coordinate coordinate = tableView.getCoordinate();
+            float endX = coordinate.endX;
+            float startX = coordinate.startX;
+            float endXCol = column.endX;
+            float startXCol = column.startX;
+            // надо вверх скролить
+            int xPos = endXCol > endX ? (int) (endXCol - endX) : 0; // значение для скролинга
+            // если надо вниз скролить
+            if (xPos == 0)
+                xPos = startX > startXCol ? (int) -(startX - startXCol) : 0;
+
+            float mScaleFactor = tableView.mScaleFactor;
+            tableView.scroller.startScroll(tableView.getScrollX(), tableView.getScrollY(), (int) (xPos * mScaleFactor), 0, 350);
+            invalidate();
+            delay_scroll = 150; // задержку меняю для того что бы подождать пока закроется окно ввода
+        }, delay_scroll);
+    }
+
+    @Override
+    public void scrollToStroke(final Coordinate row) {
         tableView.postDelayed(() -> {
 
-            float endY = header.endY;
-            int scrollY = tableView.getScrollY();
-            float startY = header.startY;
+//            float scale = tableView.mScaleFactor;
+            Coordinate coordinate = tableView.getCoordinate();
+            float endY = coordinate.endY;
+            float startY = coordinate.startY;
+            float endYRow = row.endY;
+            float startYRow = row.startY;
+            // надо вверх скролить
+            int yPos = endYRow > endY ? (int) (endYRow - endY) : 0; // значение для скролинга
+            // если надо вниз скролить
+            if (yPos == 0)
+                yPos = startY > startYRow ? (int) -(startY - startYRow) : 0;
+//            int scrollY = tableView.getScrollY();
+//            float startY = row.startY * scale;
+//
+//            int yPos = (int) (endY - tableView.getHeight() - scrollY); // значение для скролинга
+//
+//            if (yPos < 0) {// если позиция ендУ ячейки выше чем нижняя видимая чвсть
+//                if (startY - scrollY < 0) {// проверяем стартУ не ушел за экран вверх
+//                    yPos = (int) (startY - scrollY) - 2;// если так то позиция скроллинга меняется чтоб вернуть из за экрана вниз
+//                } else // если все эти условия не выполняются значит ячейка по У не вышла за границы
+//                    yPos = 0;
+//            }
 
-            int yPos = (int) (endY - tableView.getHeight() - scrollY); // значение для скролинга
+//            if (yPos != 0) yPos += 1;
 
-            if (yPos < 0) {// если позиция ендУ ячейки выше чем нижняя видимая чвсть
-                if (startY - scrollY < 0) {// проверяем стартУ не ушел за экран вверх
-                    yPos = (int) (startY - scrollY) - 2;// если так то позиция скроллинга меняется чтоб вернуть из за экрана вниз
-                } else // если все эти условия не выполняются значит ячейка по У не вышла за границы
-                    yPos = 0;
-            }
-
-            if (yPos != 0) yPos += 1;
-
-            tableView.scroller.startScroll(tableView.getScrollX(), scrollY, 0, yPos, 350);
+            float mScaleFactor = tableView.mScaleFactor;
+            tableView.scroller.startScroll(tableView.getScrollX(), tableView.getScrollY(), 0, (int) (yPos * mScaleFactor), 350);
             invalidate();
-            deley_scroll = 150; // задержку меняю для того что бы подождать пока закроется окно ввода
-        }, deley_scroll);
+            delay_scroll = 150; // задержку меняю для того что бы подождать пока закроется окно ввода
+        }, delay_scroll);
     }
 
     @Override
     public void scrollToEndIfOutside(final int widthTable, final int heightTable) {
-        final boolean visibleBottomMenu = bottomMenu.getVisibility() == VISIBLE;
+        delay_scroll = 400;
+//        final boolean visibleBottomMenu = bottomMenu.getVisibility() == VISIBLE;
         tableView.postDelayed(() -> {
+//            float scale = tableView.mScaleFactor;
 
-            int xPosition = widthTable - tableView.getWidth() - tableView.getScrollX();
-            int yPosition = heightTable - tableView.getHeight() - tableView.getScrollY(); // - cellEditWindowHeight;
+//            int xPosition = (int) (widthTable * scale - tableView.getWidth() - tableView.getScrollX());
+//            int yPosition = (int) (heightTable * scale - tableView.getHeight() - tableView.getScrollY()); // - cellEditWindowHeight;
+            /*
+            ну зачем мне это говно нужно было (((
+             */
+            // когда при открытой клаве нажимают назад ячейку не будет видно поэтому...
+//            if (editCellWindow.getVisibility() == VISIBLE
+//                    && visibleBottomMenu
+//                    && isHideKeyboardEvent) {
+//                yPosition += editCellWindow.getHeight();
+//                isHideKeyboardEvent = false;
+//            }
 
-            if (editCellWindow.getVisibility() == VISIBLE) {
-                if (visibleBottomMenu)
-                    yPosition -= editCellWindow.getHeight();
+//            if (xPosition > 0) xPosition = 0;
+//            if (widthTable * scale < tableView.getWidth()) xPosition = -tableView.getScrollX();
+//            if (yPosition > 0) yPosition = 0;
+//            if (heightTable * scale < tableView.getHeight()) yPosition = -tableView.getScrollY();
+
+            Coordinate coordinate = tableView.getCoordinate();
+            int xPosition = coordinate.endX > widthTable ? (int) -(coordinate.endX - widthTable) : 0;
+            int yPosition = coordinate.endY > heightTable ? (int) -(coordinate.endY - heightTable) : 0; // - cellEditWindowHeight;
+
+            if (widthTable < coordinate.width) {
+                xPosition = 0;
+                if (coordinate.startX > 0)
+                    xPosition = (int) -coordinate.startX;
             }
 
-
-            if (xPosition > 0) xPosition = 0;
-            if (widthTable < tableView.getWidth()) xPosition = -tableView.getScrollX();
-            if (yPosition > 0) yPosition = 0;
-            if (heightTable < tableView.getHeight()) yPosition = -tableView.getScrollY();
+            if (heightTable < coordinate.height) {
+                yPosition = 0;
+                if (coordinate.startY > 0)
+                    yPosition = (int) -coordinate.startY;
+            }
 
             if (yPosition < 0 || xPosition < 0) {
                 tableView.scroller.startScroll(tableView.getScrollX(), tableView.getScrollY(), xPosition, yPosition, 350);
                 invalidate();
             }
-            deley_scroll = 150; // задержку меняю для того что бы подождать пока закроется окно ввода
-        }, deley_scroll);
+            delay_scroll = 150; // задержку меняю для того что бы подождать пока закроется окно ввода
+        }, delay_scroll);
+    }
+
+    private class TextWatcher implements android.text.TextWatcher {
+        @Override
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+        }
+
+        @Override
+        public void onTextChanged(CharSequence s, int start, int before, int count) {
+            if (!blockEditText && isVisibleEditWindow())
+                tablePresenter.setText(s.toString());
+        }
+
+        @Override
+        public void afterTextChanged(Editable s) {
+        }
     }
 
 }

@@ -98,7 +98,7 @@
 
     </LinearLayout>
 
-    <android.support.v7.widget.Toolbar
+    <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar_table"
         android:layout_width="match_parent"
         android:layout_height="48dp"
@@ -118,7 +118,7 @@
             android:hint="@string/name_table"
             android:singleLine="true"
             android:textSize="14sp"/>
-    </android.support.v7.widget.Toolbar>
+    </androidx.appcompat.widget.Toolbar>
 
 
     <FrameLayout

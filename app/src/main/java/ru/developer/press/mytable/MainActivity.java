@@ -1,49 +1,56 @@
 package ru.developer.press.mytable;
 
-import android.annotation.SuppressLint;
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.os.Handler;
-import android.support.annotation.NonNull;
-import android.support.v7.app.AppCompatActivity;
+import android.os.Build;
 import android.os.Bundle;
-import android.support.v7.widget.Toolbar;
+import android.os.Handler;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
+import android.widget.Toast;
 
-//import com.squareup.picasso.Transformation;
-
+import org.apache.poi.ss.usermodel.Workbook;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-import ru.developer.press.mytable.dialogs.DialogNameTable;
-import ru.developer.press.mytable.helpers.StaticMethods;
-import ru.developer.press.mytable.helpers.setting_table.TableFileHelper;
-import ru.developer.press.mytable.table.model.Column;
-import ru.developer.press.mytable.helpers.TableLab;
-import ru.developer.press.mytable.table.model.TableModel;
 import ru.developer.press.myTable.R;
+import ru.developer.press.mytable.dialogs.DialogNameTable;
+import ru.developer.press.mytable.dialogs.SendTableDialog;
+import ru.developer.press.mytable.helpers.AppEvents;
+import ru.developer.press.mytable.helpers.StaticMethods;
+import ru.developer.press.mytable.helpers.TableFileHelper;
+import ru.developer.press.mytable.helpers.TableLab;
+import ru.developer.press.mytable.interfaces.SendTableGetter;
+import ru.developer.press.mytable.model.Column;
+import ru.developer.press.mytable.model.TableModel;
 import uk.co.markormesher.android_fab.SpeedDialMenuAdapter;
 import uk.co.markormesher.android_fab.SpeedDialMenuItem;
+
+//import com.squareup.picasso.Transformation;
 
 public class MainActivity extends AppCompatActivity {
     public static String TABLE_ACTIVITY_KEY = "tableActivity";
     private final MainActivity context;
-    private ScrollMain scrollView;
-    private uk.co.markormesher.android_fab.FloatingActionButton addButtonLib;
+    private uk.co.markormesher.android_fab.FloatingActionButton addButton;
 
-    private Toolbar toolbar;
     private LinearLayout containerCards;
-    private List<File> tableFiles;
 
     public MainActivity() {
         context = MainActivity.this;
@@ -58,12 +65,12 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        addButtonLib = findViewById(R.id.floatingActionButton);
+        addButton = findViewById(R.id.floatingActionButton);
         setFButtonSetting();
-        scrollView = findViewById(R.id.scroll_view_main);
+        ScrollMain scrollView = findViewById(R.id.scroll_view_main);
 
-        scrollView.setAddButton(addButtonLib);
-        toolbar = findViewById(R.id.toolbar);
+        scrollView.setAddButton(addButton);
+        Toolbar toolbar = findViewById(R.id.toolbar);
 //        toolbar.setTitle(getString(R.string.Active));
         setSupportActionBar(toolbar);
 
@@ -75,14 +82,14 @@ public class MainActivity extends AppCompatActivity {
 //        AdRequest adRequest = new AdRequest.Builder().build();
 //        adView.loadAd(adRequest);
 
-        addButtonLib.setOnSpeedDialMenuOpenListener(floatingActionButton -> floatingActionButton.getCardView().animate().rotation(45));
-        addButtonLib.setOnSpeedDialMenuCloseListener(floatingActionButton -> floatingActionButton.getCardView().animate().rotation(0));
+        addButton.setOnSpeedDialMenuOpenListener(floatingActionButton -> floatingActionButton.getCardView().animate().rotation(45));
+        addButton.setOnSpeedDialMenuCloseListener(floatingActionButton -> floatingActionButton.getCardView().animate().rotation(0));
 
     }
 
     private void setFButtonSetting() {
         MenuFAB menuFAB = new MenuFAB();
-        addButtonLib.setSpeedDialMenuAdapter(menuFAB);
+        addButton.setSpeedDialMenuAdapter(menuFAB);
     }
 
     @Override
@@ -103,26 +110,20 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    @SuppressLint("StaticFieldLeak")
     @Override
     protected void onResume() {
         super.onResume();
-        updateCards();
+        if (permissionCheck())
+            updateCards();
+//            containerCards.postDelayed(this::updateCards, 500);
     }
 
-    @SuppressLint("CheckResult")
     public void updateCards() {
         containerCards.removeAllViews();
-        tableFiles = TableLab.get(this).getTableFiles();
-
+        List<File> tableFiles = TableLab.get(this).getTableFiles();
+        AppEvents appEvents = AppEvents.get();
+        String openName = appEvents.getFileName();
         for (final File tableFile : tableFiles) {
-            // карточка таблицы
-            LinearLayout l = (LinearLayout) getLayoutInflater().inflate(R.layout.table_card, null);
-            // имя карточки
-            TextView nameTable = l.findViewById(R.id.name_card);
-            String name = tableFile.getName();
-            nameTable.setText(name.substring(0, name.lastIndexOf(".")));
-            //клик по карточке
             View.OnClickListener onClick = v -> {
                 switch (v.getId()) {
                     case R.id.menu_tablecard_imButton:
@@ -133,9 +134,26 @@ public class MainActivity extends AppCompatActivity {
                         break;
                 }
             };
-
-            l.setOnClickListener(onClick);
-            l.findViewById(R.id.menu_tablecard_imButton).setOnClickListener(onClick);// скролвиев обрабатывает только свои дочерние элементы, пришлось и на его лайот навешать.
+            // карточка таблицы
+            LinearLayout l = (LinearLayout) getLayoutInflater().inflate(R.layout.table_card, null);
+            // имя карточки
+            TextView nameTable = l.findViewById(R.id.name_card);
+            if (appEvents.isSaveStart() && tableFile.getPath().equals(openName)) {
+                nameTable.setTextColor(Color.LTGRAY);
+                appEvents.setSaveEventListener(() -> {
+                    nameTable.setTextColor(Color.BLACK);
+                    l.setOnClickListener(onClick);
+                    l.findViewById(R.id.menu_tablecard_imButton).setOnClickListener(onClick);// скролвиев обрабатывает только свои дочерние элементы, пришлось и на его лайот навешать.
+                    AppEvents.destroy();
+//                    updateCards();
+                });
+            } else {
+                l.setOnClickListener(onClick);
+                l.findViewById(R.id.menu_tablecard_imButton).setOnClickListener(onClick);// скролвиев обрабатывает только свои дочерние элементы, пришлось и на его лайот навешать.
+            }
+            String name = tableFile.getName();
+            nameTable.setText(name.substring(0, name.lastIndexOf(".")));
+            //клик по карточке
 
 //            ImageView imageColumn = l.findViewById(R.id.image_column_card);
 //            getTableToImage(table, imageColumn);
@@ -161,25 +179,61 @@ public class MainActivity extends AppCompatActivity {
         PopupMenu popupMenu = new PopupMenu(this, view);
         popupMenu.getMenuInflater().inflate(R.menu.table_context_menu, popupMenu.getMenu());
         popupMenu.setOnMenuItemClickListener(menuItem -> {
+            String fileName = tableFile.getName();
+            final String tableName = fileName.substring(0, fileName.lastIndexOf("."));
             switch (menuItem.getItemId()) {
                 case R.id.rename:
 
-                    String name = tableFile.getName();
-                    DialogNameTable nameTable = DialogNameTable.getDialog(name.substring(0, name.lastIndexOf(".")));
                     DialogNameTable.OnButtonClick buttonClick = (String newName) -> {
-
-                        TableFileHelper.renameFile(tableFile, newName + TableFileHelper.TBL); //  добавляет расширение
+                        String newNameTableFile = newName + TableFileHelper.TBL;
+                        TableFileHelper.renameFile(tableFile, newNameTableFile); //  добавляет расширение
                         updateCards();
                     };
-                    nameTable.setClickInterface(buttonClick);
+                    DialogNameTable nameTable = DialogNameTable.getDialog(tableName, buttonClick);
                     nameTable.showNow(getSupportFragmentManager(), "name_table");
                     break;
-                case R.id.save:
-//                    saveTable(name);
+                case R.id.send:
+                    MainActivity context = MainActivity.this;
+
+                    SendTableGetter sendTableGetter = new SendTableGetter() {
+                        @Override
+                        public File getTableSource() {
+                            return tableFile;
+                        }
+
+                        @Override
+                        public File getTablePicture() {
+                            File pic = new File(TableFileHelper.getTableFolder(tableFile.getPath()) + tableName.substring(tableName.length() - 4) + ".png");
+
+                            try {
+                                try (FileOutputStream fos = new FileOutputStream(pic)) {
+                                    Bitmap bitmap = StaticMethods.getScreenTable(TableLab.get(context).getTableForFile(tableFile.getPath()), context);
+                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 97, fos);
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            return pic;
+                        }
+
+                        @Override
+                        public File getTableExcel() {
+                            File excel = new File(TableFileHelper.getTableFolder(tableFile.getPath()) + tableName.substring(0, tableName.length() - 4) + ".xls");
+                            Workbook workbook = StaticMethods.getTableExcel(TableLab.get(context).getTableForFile(tableFile.getPath()));
+                            try {
+                                workbook.write(new FileOutputStream(excel));
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            return excel;
+                        }
+                    };
+                    SendTableDialog sendTableDialog = SendTableDialog.get(sendTableGetter);
+                    sendTableDialog.show(getSupportFragmentManager(), "send");
                     break;
                 case R.id.delete:
 
-                    TableLab.get(context).deleteTableOfDB(tableFile);
+                    TableLab.get(this.context).deleteTable(tableFile);
                     updateCards();
             }
             return true;
@@ -206,7 +260,7 @@ public class MainActivity extends AppCompatActivity {
 //        }
 //    }
 
-    private String addTable(int variation) {
+    private TableModel addTable(int variation) {
 
         TableModel tm = new TableModel();
         // имя таблицы (ид таблицы, ид таблицы настроек в конструкторе заданы)
@@ -223,18 +277,17 @@ public class MainActivity extends AppCompatActivity {
                 nameTable = getString(R.string.empty_table) + date;
                 Column column = new Column();
                 column.text = getString(R.string.column) + " " + tm.getColumns().size();
-                tm.getColumns().add(column);
+                tm.addNewColumn(column);
         }
 
         tm.setNameTable(nameTable);
-        tm.addNewStroke(-1, -1); //  -1 типа просто добавить
-        TableLab.get(this).createTable(tm);
+        tm.addStroke(-1, -1); //  -1 типа просто добавить
 
-        return tm.openName;
+
+        return tm;
     }
 
     private void addColumnTableContact(TableModel table) {
-        List<Column> columns = table.getColumns();
         Column colFullName = new Column();
         Column colNumberPhone = new Column();
         Column colMail = new Column();
@@ -242,21 +295,21 @@ public class MainActivity extends AppCompatActivity {
 
         //name
         colFullName.text = getString(R.string.full_name);
-        colFullName.width = 350;
-        columns.add(colFullName);
+        colFullName.setWidth(350);
+        table.addNewColumn(colFullName);
         // number
         colNumberPhone.text = getString(R.string.phone);
-        colNumberPhone.width = 300;
+        colNumberPhone.setWidth(300);
         colNumberPhone.setInputType(1);
-        columns.add(colNumberPhone);
+        table.addNewColumn(colNumberPhone);
         //mail
         colMail.text = getString(R.string.mail);
-        colMail.width = 300;
-        columns.add(colMail);
+        colMail.setWidth(300);
+        table.addNewColumn(colMail);
         //business
         colBusiness.text = getString(R.string.business);
-        colBusiness.width = 400;
-        columns.add(colBusiness);
+        colBusiness.setWidth(400);
+        table.addNewColumn(colBusiness);
     }
 
 //    @Override
@@ -278,6 +331,52 @@ public class MainActivity extends AppCompatActivity {
 //                break;
 //        }
 //    }
+
+    private boolean permissionCheck() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            int perm = checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            if (perm != PackageManager.PERMISSION_GRANTED) {
+                if (shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                    Toast.makeText(getApplicationContext(), "Включите разрешение памяти в настройках приложения"
+                            , Toast.LENGTH_SHORT).show();
+                    return false;
+                } else {
+                    requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 777);
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+//    private class TransformImage implements Transformation{
+//
+//        @Override
+//        public Bitmap transform(Bitmap source) {
+//            return null;
+//        }
+//
+//        @Override
+//        public String key() {
+//            return null;
+//        }
+//    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 777) {
+            if (grantResults.length == 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(getApplicationContext(), "Отказано в доступе!", Toast.LENGTH_SHORT).show();
+            } else {
+                for (int grantResult : grantResults) {
+                    if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                        Toast.makeText(getApplicationContext(), "Доступ разрешен!", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+        }
+    }
 
     private class MenuFAB extends SpeedDialMenuAdapter {
         private ArrayList<ItemInfo> itemSettingList;
@@ -309,12 +408,24 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public boolean onMenuItemClick(final int position) {
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    startTable(addTable(position));
+            new Handler().postDelayed(() -> {
+                if (permissionCheck()) {
+                    TableModel tableModel = addTable(position);
+                    DialogNameTable.OnButtonClick buttonClick = (String newName) -> {
+
+                        tableModel.setNameTable(newName);
+                        TableLab.get(MainActivity.this).createTable(tableModel);
+
+                        String newNameTableFile = newName + TableFileHelper.TBL;
+                        tableModel.openName = TableFileHelper.renameFile(new File(tableModel.openName), newNameTableFile); //  добавляет расширение
+
+                        updateCards();
+                        startTable(tableModel.openName);
+                    };
+                    DialogNameTable nameTable = DialogNameTable.getDialog(tableModel.getNameTable(), buttonClick);
+                    nameTable.showNow(getSupportFragmentManager(), "name_table");
                 }
-            }, 250);
+            }, 150);
 
             return true;
         }
@@ -352,17 +463,4 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
-//    private class TransformImage implements Transformation{
-//
-//        @Override
-//        public Bitmap transform(Bitmap source) {
-//            return null;
-//        }
-//
-//        @Override
-//        public String key() {
-//            return null;
-//        }
-//    }
 }

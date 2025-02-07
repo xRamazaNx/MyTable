@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="text_color_primary">#d6d6d6</color>
-    <color name="colorPrimary">#3F51B5</color>
+    <color name="colorPrimary">#3f51b5</color>
     <color name="colorPrimaryDark">#303f9f</color>
     <color name="colorAccent">#ff4081</color>
 
@@ -11,10 +11,10 @@
     <color name="gray_light3">#f7f7f7</color>
     <color name="gray_light4">#f6f6f6</color>
     <color name="gray_light">#f1f1f1</color>
-    <color name="gray_center">#e2e2e2</color>
+    <color name="gray_center">#d7d7d7</color>
     <color name="select_stroke_column">#f0f0f0</color>
     <color name="gray_light_counter">#bebebe</color>
-    <color name="gray">#acacac</color>
+    <color name="gray">#bebebe</color>
     <color name="dark_gray">#313131</color>
     <color name="counter_cell">#181818</color>
     <color name="color_normal">#a1a1a1</color>

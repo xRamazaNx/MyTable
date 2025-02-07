@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        android:background="@android:color/white"
+        android:orientation="vertical"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <LinearLayout
+            android:id="@+id/send_excel"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp">
+
+            <ImageButton
+                android:id="@+id/imageButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@android:color/transparent"
+                android:scaleX="0.9"
+                android:scaleY="0.9"
+                app:srcCompat="@mipmap/ic_exel"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginLeft="8dp"
+                android:text="@string/excel"
+                android:textSize="18sp"/>
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginLeft="4dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginRight="4dp"
+            android:layout_marginBottom="16dp"
+            android:background="@color/gray_light">
+
+        </FrameLayout>
+
+        <LinearLayout
+            android:id="@+id/send_pic"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp">
+
+            <ImageButton
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@android:color/transparent"
+                android:scaleX="1.7"
+                android:scaleY="1.7"
+                app:srcCompat="@drawable/ic_send_pic"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginLeft="8dp"
+                android:text="@string/pic"
+                android:textSize="18sp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</ScrollView>

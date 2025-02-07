@@ -11,7 +11,6 @@
 <!--android:layout_width="wrap_content"-->
 <!--android:layout_height="wrap_content">-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              xmlns:app="http://schemas.android.com/apk/res-auto"
               xmlns:tools="http://schemas.android.com/tools"
               android:layout_width="match_parent"
               android:layout_height="wrap_content"
@@ -32,11 +31,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical|start"
         android:background="@color/gray_light"
-        android:paddingStart="16dp"
-        android:paddingLeft="16dp"
-        android:paddingTop="14dp"
-        android:paddingRight="16dp"
-        android:paddingBottom="16dp"
+        android:padding="12dp"
         android:text="@string/setting_column"
         android:textColor="@android:color/black"
         android:textSize="18sp"/>
@@ -66,8 +61,7 @@
                 android:id="@+id/linear_from_types"
                 android:layout_width="match_parent"
                 android:layout_height="30dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="8dp"
                 android:orientation="horizontal">
 
                 <TextView
@@ -88,7 +82,6 @@
                     android:layout_gravity="center"
                     android:layout_weight="1"
                     android:gravity="center"
-                    android:padding="0dp"
                     android:text="@string/type_number"
                     android:textColor="@color/dark_gray"
                     android:textSize="18sp"/>
@@ -100,59 +93,41 @@
                     android:layout_gravity="center"
                     android:layout_weight="1"
                     android:gravity="center"
-                    android:padding="0dp"
                     android:text="@string/date"
                     android:textColor="@color/dark_gray"
                     android:textSize="18sp"/>
 
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="16dp"
-                android:orientation="horizontal"
-                android:visibility="gone">
-
                 <TextView
+                    android:id="@+id/type_formula"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_gravity="center"
                     android:layout_weight="1"
-                    android:text="@string/formule"
-                    android:textColor="@color/gray"
-                    android:textSize="16sp"/>
-
-                <EditText
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_weight="2.5"
-                    android:ems="10"
-                    android:enabled="false"
                     android:gravity="center"
-                    android:hint="пока не работает"
-                    android:inputType="text"
-                    android:textIsSelectable="true"
-                    android:textSize="12sp"/>
+                    android:text="@string/formula"
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="18sp"
+                    android:textStyle="bold"/>
+
+
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="8dp"
                 android:baselineAligned="false"
                 android:orientation="vertical">
 
                 <CheckBox
                     android:id="@+id/is_edit_cell_check"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
                     android:checked="true"
                     android:padding="3dp"
-                    android:text="@string/pref_cells"
+                    android:text="@string/is_pref_cells"
                     android:textColor="@android:color/black"
                     android:textSize="16sp"/>
 
@@ -256,10 +231,10 @@
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
                         android:layout_marginLeft="4dp"
                         android:gravity="center_horizontal"
-                        android:orientation="horizontal"
-                        android:layout_marginStart="4dp">
+                        android:orientation="horizontal">
 
                         <ImageButton
                             android:id="@+id/down_size_text"
@@ -273,7 +248,7 @@
 
                         <TextView
                             android:id="@+id/size_text"
-                            android:layout_width="60dp"
+                            android:layout_width="50dp"
                             android:layout_height="40dp"
                             android:fontFamily="serif"
                             android:gravity="center"
@@ -298,6 +273,137 @@
 
             </LinearLayout>
 
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:background="@color/gray_center">
+
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/textView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif"
+                android:gravity="center"
+                android:paddingLeft="8dp"
+                android:paddingTop="8dp"
+                android:paddingRight="8dp"
+                android:paddingBottom="4dp"
+                android:text="@string/paddings"
+                android:textColor="@android:color/black"
+                android:textSize="16sp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/in_left"
+                        android:textColor="@color/dark_gray"/>
+
+                    <Spinner
+                        android:id="@+id/spinner_left_padding"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:dropDownWidth="60dp"
+                        android:entries="@array/padding_array"
+                        android:gravity="center"
+                        android:splitMotionEvents="true"/>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/in_right"
+                        android:textColor="@color/dark_gray"/>
+
+                    <Spinner
+                        android:id="@+id/spinner_right_padding"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:dropDownWidth="60dp"
+                        android:entries="@array/padding_array"
+                        android:gravity="center"
+                        android:splitMotionEvents="true"/>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/in_up"
+                        android:textColor="@color/dark_gray"/>
+
+                    <Spinner
+                        android:id="@+id/spinner_up_padding"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:dropDownWidth="60dp"
+                        android:entries="@array/padding_array"
+                        android:gravity="center"
+                        android:splitMotionEvents="true"/>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/in_down"
+                        android:textColor="@color/dark_gray"/>
+
+                    <Spinner
+                        android:id="@+id/spinner_down_padding"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:dropDownWidth="60dp"
+                        android:entries="@array/padding_array"
+                        android:gravity="center"
+                        android:splitMotionEvents="true"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

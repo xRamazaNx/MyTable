@@ -107,7 +107,7 @@ public class Selector extends Coordinate {
         float innerDownDist = selectEndY - grabSize;
         float outDownDist = selectEndY + outOffset;
 
-        if (selectMode == TablePresenter.SelectMode.header){
+        if (selectMode == TablePresenter.SelectMode.row){
             outRightDist = touchX + 100;
             outLeftDist = touchX - 100; // просто пусть 100 будет
         }
@@ -131,7 +131,7 @@ public class Selector extends Coordinate {
         if (down && up) up = false;
         if (left && right) left = false;
 
-        if (selectMode == TablePresenter.SelectMode.header) {
+        if (selectMode == TablePresenter.SelectMode.row) {
             left = false;
             right = false;
         } else if (selectMode == TablePresenter.SelectMode.column) {

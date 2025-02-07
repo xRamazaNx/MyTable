@@ -1,12 +1,12 @@
 package ru.developer.press.mytable.history.comands;
 
 import ru.developer.press.mytable.history.Command;
-import ru.developer.press.mytable.table.model.Cell;
-import ru.developer.press.mytable.table.model.TableModel;
+import ru.developer.press.mytable.model.Cell;
+import ru.developer.press.mytable.model.TableModel;
 
 // нужно в момент до изменения подсунуть текущее положение а в момент когда закончилось редоктирование подсунуть измененную
 public class EditCell extends Command {
-    public final int[] index; // 0=entry 1=columnIndex
+    public final int[] index; // 0=entry 1=indexColumn
     public Cell oldCell;
     public Cell newCell;
 
@@ -30,7 +30,7 @@ public class EditCell extends Command {
 
     @Override
     public void undo(TableModel tableModel) {
-        Cell origin = tableModel.getHeaders().get(index[0]).getCell(index[1]);
+        Cell origin = tableModel.getRows().get(index[0]).getCellAtIndex(index[1]);
         origin.date = oldCell.date;
         origin.text = oldCell.text;
         historyUpdateListener.undo(this);
@@ -38,7 +38,7 @@ public class EditCell extends Command {
 
     @Override
     public void redo(TableModel tableModel) {
-        Cell origin = tableModel.getHeaders().get(index[0]).getCell(index[1]);
+        Cell origin = tableModel.getRows().get(index[0]).getCellAtIndex(index[1]);
         origin.date = newCell.date;
         origin.text = newCell.text;
         historyUpdateListener.redo(this);

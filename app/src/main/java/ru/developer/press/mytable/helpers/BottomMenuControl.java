@@ -2,20 +2,19 @@ package ru.developer.press.mytable.helpers;
 
 import android.app.Activity;
 import android.graphics.Color;
-import android.support.v4.content.ContextCompat;
+import androidx.core.content.ContextCompat;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 
-import ru.developer.press.mytable.interfaces.BottomMenuClick;
 import ru.developer.press.myTable.R;
+import ru.developer.press.mytable.interfaces.table.BottomMenuClick;
 
 public class BottomMenuControl implements View.OnClickListener {
     private ImageButton addRightColumn; // также будет добавлять строку вниз
     private ImageButton addDownStroke; // будет добавлять колону в лево
-    private ImageButton heightCells;
     private Animation animationClick;
     private LinearLayout bottomMenu;
     private BottomMenuClick bMClickListener;
@@ -34,7 +33,7 @@ public class BottomMenuControl implements View.OnClickListener {
         ImageButton settingTable = activity.findViewById(R.id.setting_table);
 
         width = activity.findViewById(R.id.width_bm);
-        heightCells = activity.findViewById(R.id.height_cells_bm);
+        ImageButton heightCells = activity.findViewById(R.id.height_cells_bm);
 
         addRightColumn.setOnClickListener(this);
         addDownStroke.setOnClickListener(this);
@@ -49,6 +48,8 @@ public class BottomMenuControl implements View.OnClickListener {
 
     @Override
     public void onClick(final View v) {
+        if (bMClickListener == null)
+            return;
         switch (v.getId()) {
             case R.id.add_column_right_bm:
                 if (columnMode == AddButtonEnum.ADD_UP_STROKE)
@@ -68,7 +69,7 @@ public class BottomMenuControl implements View.OnClickListener {
                 bMClickListener.setWidth(width);
                 break;
             case R.id.height_cells_bm:
-                bMClickListener.setHeightCells(heightCells);
+                bMClickListener.setHeightCells();
         }
         v.startAnimation(animationClick);
         animationClick.setAnimationListener(new Animation.AnimationListener() {

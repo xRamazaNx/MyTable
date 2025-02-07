@@ -22,4 +22,13 @@
         android:icon="@drawable/ic_redo"
         android:title="@string/redo"
         app:showAsAction="always"/>
+    <item
+        android:id="@+id/rename"
+        android:icon="@android:drawable/ic_menu_share"
+        android:title="@string/rename"
+        />
+    <item
+        android:id="@+id/send"
+        android:title="@string/export">
+    </item>
 </menu>

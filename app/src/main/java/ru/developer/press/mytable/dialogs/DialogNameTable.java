@@ -2,86 +2,105 @@ package ru.developer.press.mytable.dialogs;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
-import android.content.DialogInterface;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.DialogFragment;
-import android.support.v7.app.AlertDialog;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.DialogFragment;
+import androidx.appcompat.app.AlertDialog;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
+
+import java.io.File;
+import java.util.List;
+import java.util.Objects;
+
 import ru.developer.press.myTable.R;
 import ru.developer.press.mytable.helpers.StaticMethods;
+import ru.developer.press.mytable.helpers.TableFileHelper;
+import ru.developer.press.mytable.helpers.TableLab;
 
 
 @SuppressLint("ValidFragment")
 public class DialogNameTable extends DialogFragment {
     public static final String KEY_NAME_TABLE = "nametable";
     //    private LinearLayout view;
+    // листенер который легче обработать там от куда открыли это окно
     private OnButtonClick onClick;
     private EditText editText;
     private String nameTable;
 
+    // инстант с отправкой аргументов в качестве имени и листенера для обработки позитивБатона
+    public static DialogNameTable getDialog(String nameTable, OnButtonClick buttonClick) {
+
+        DialogNameTable dialogNameTable = new DialogNameTable();
+        Bundle bundle = new Bundle();
+        bundle.putString(KEY_NAME_TABLE, nameTable);
+        dialogNameTable.setArguments(bundle);
+        dialogNameTable.setClickInterface(buttonClick);
+
+        return dialogNameTable;
+    }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         assert getArguments() != null;
         nameTable = getArguments().getString(KEY_NAME_TABLE);
-//        view = (LinearLayout) LayoutInflater.from(getActivity()).inflate(R.layout.cell_edit, null);
     }
 
     @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         editText = new EditText(getContext());
+        // задаем текущее имя
         editText.setText(nameTable);
-        int padding = StaticMethods.convertDpToPixels(16, getContext());
-        editText.setPadding(padding,padding/2,padding,padding/2);
+        // паддинг для едиттекст чтоб не был в притык в левой части
+        int padding = StaticMethods.convertDpToPixels(16, Objects.requireNonNull(getContext()));
+        editText.setPadding(padding, padding / 2, padding, padding / 2);
+        // перейти в конец
         editText.setSelection(nameTable.length());
-//        editText.getRootView().setPadding(40, 0, 40,0);
-//        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-//        params.setMargins(20, 10, 20, 0);
-//        editText.setLayoutParams(params);
+        // включаем фокусирование
         editText.setFocusableInTouchMode(true);
         @SuppressWarnings("ConstantConditions")
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         builder.setTitle(R.string.new_name);
-        builder.setPositiveButton(R.string.rename, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-                onClick.onDialogClickListener(editText.getText().toString());
-                dialogInterface.dismiss();
-            }
-        });
-        builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-                dialogInterface.dismiss();
-            }
-        });
         builder.setView(editText);
-        return builder.create();
-    }
+        builder.setPositiveButton(R.string.rename, null).
+                setNegativeButton(R.string.cancel, null);
 
-    public static DialogNameTable getDialog(String nameTable) {
 
-        DialogNameTable dialogNameTable = new DialogNameTable();
-        Bundle bundle = new Bundle();
-        bundle.putString(KEY_NAME_TABLE, nameTable);
-        dialogNameTable.setArguments(bundle);
+        AlertDialog alertDialog = builder.create();
+        alertDialog.setOnShowListener(dialogInterface -> {
+            // позитив батон
+            Button button = alertDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            button.setOnClickListener(view1 -> {
+                String newName = editText.getText().toString();
 
-        return dialogNameTable;
-    }
-//
-//    private View.OnClickListener clickListener = new View.OnClickListener() {
-//        @Override
-//        public void onClick(View v) {
-//            onClick.onDialogClickListener(editText.getText().toString());
-//        }
-//    };
+                String newNameTableFile = newName + TableFileHelper.TBL;
 
-    public interface OnButtonClick {
-        void onDialogClickListener(String name);
+                boolean isFindEqualNname = false;
+                List<File> arrayList = TableLab.get(getActivity()).getTableFiles();
+                for (File file : arrayList) {
+                    if (file.getName().equals(newNameTableFile)) {
+                        isFindEqualNname = true;
+                        break;
+                    }
+                }
+//                String nameTable = this.nameTable + TableFileHelper.TBL;
+//                if (nameTable.isNoEquals(newNameTableFile))
+//                    isFindEqualNname = false;
+
+                if (!isFindEqualNname) {
+                    onClick.onDialogClickListener(newName);
+                    dialogInterface.dismiss();
+
+                } else
+                    Toast.makeText(getActivity(), "Таблица с таким именем уже существует!", Toast.LENGTH_SHORT).show();
+            });
+
+        });
+        return alertDialog;
     }
 
     @Override
@@ -90,8 +109,13 @@ public class DialogNameTable extends DialogFragment {
         onClick = null;
     }
 
-    public void setClickInterface(OnButtonClick onClick){
+    // тут назначаем естественно батонлистенер
+    private void setClickInterface(OnButtonClick onClick) {
         this.onClick = onClick;
+    }
+
+    public interface OnButtonClick {
+        void onDialogClickListener(String name);
     }
 
 }

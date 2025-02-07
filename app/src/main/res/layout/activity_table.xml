@@ -2,14 +2,13 @@
 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
                 xmlns:app="http://schemas.android.com/apk/res-auto"
-                xmlns:tools="http://schemas.android.com/tools"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:focusable="true"
                 android:focusableInTouchMode="true"
     >
 
-    <android.support.v7.widget.Toolbar
+    <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar_table"
         android:layout_width="match_parent"
         android:layout_height="48dp"
@@ -29,7 +28,7 @@
             android:hint="@string/name_table"
             android:singleLine="true"
             android:textSize="14sp"/>
-    </android.support.v7.widget.Toolbar>
+    </androidx.appcompat.widget.Toolbar>
 
 
     <FrameLayout
@@ -44,9 +43,14 @@
             android:id="@+id/table_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:layout_marginEnd="1dp"
+            android:layout_marginRight="1dp"
             android:isScrollContainer="true"
             android:scrollbarAlwaysDrawHorizontalTrack="true"
             android:scrollbarAlwaysDrawVerticalTrack="true"
+            android:scrollbarSize="1dp"
+            android:scrollbarThumbHorizontal="@color/dark_gray"
+            android:scrollbarThumbVertical="@color/dark_gray"
             android:scrollbars="horizontal|vertical">
 
         </ru.developer.press.mytable.table.views.TableView>

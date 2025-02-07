@@ -4,21 +4,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ru.developer.press.mytable.history.Command;
-import ru.developer.press.mytable.table.model.Cell;
-import ru.developer.press.mytable.table.model.Column;
-import ru.developer.press.mytable.table.model.Header;
-import ru.developer.press.mytable.table.model.TableModel;
+import ru.developer.press.mytable.model.Cell;
+import ru.developer.press.mytable.model.Column;
+import ru.developer.press.mytable.model.Row;
+import ru.developer.press.mytable.model.TableModel;
 
 public class EditPrefs extends Command {
-    public List<Integer> indexColumns;
-    public List<Integer> indexHeaders;
-    public List<int[]> indexCells;
+    private List<Integer> indexColumns;
+    private List<Integer> indexHeaders;
+    private List<int[]> indexCells;
 
     private List<Column> oldColumns;
     private List<Column> newColumns;
 
-    private List<Header> oldHeaderPrefs;
-    private List<Header> newHeaderPrefs;
+    private List<Row> oldRowPrefs;
+    private List<Row> newRowPrefs;
 
     private List<Cell> oldCellPrefs;
     private List<Cell> newCellPrefs;
@@ -31,8 +31,8 @@ public class EditPrefs extends Command {
         oldColumns = new ArrayList<>();
         newColumns = new ArrayList<>();
 
-        oldHeaderPrefs = new ArrayList<>();
-        newHeaderPrefs = new ArrayList<>();
+        oldRowPrefs = new ArrayList<>();
+        newRowPrefs = new ArrayList<>();
 
         oldCellPrefs = new ArrayList<>();
         newCellPrefs = new ArrayList<>();
@@ -40,7 +40,7 @@ public class EditPrefs extends Command {
 
     public void setOldPrefs(TableModel tableModel) {
         List<Column> columns = tableModel.getColumns();
-        List<Header> headerPrefs = tableModel.getHeaders();
+        List<Row> rowPrefs = tableModel.getRows();
 
         for (int i = 0; i < indexColumns.size(); i++) {
             Integer index = indexColumns.get(i);
@@ -49,21 +49,21 @@ public class EditPrefs extends Command {
         }
         for (int i = 0; i < indexHeaders.size(); i++) {
             Integer index = indexHeaders.get(i);
-            Header oldPrefs = headerPrefs.get(index);
-            this.oldHeaderPrefs.add(new Header().copyPrefs(oldPrefs));
+            Row oldPrefs = rowPrefs.get(index);
+            this.oldRowPrefs.add(new Row().copyPrefs(oldPrefs));
         }
         for (int i = 0; i < indexCells.size(); i++) {
             int indexStroke = indexCells.get(i)[0];
             int indexColumn = indexCells.get(i)[1];
-            Cell oldPrefs = headerPrefs.get(indexStroke).getCell(indexColumn);
+            Cell oldPrefs = rowPrefs.get(indexStroke).getCellAtIndex(indexColumn);
             this.oldCellPrefs.add(new Cell().copyPrefs(oldPrefs));
         }
     }
 
-    public void setNewColumns(TableModel tableModel) {
+    public void setNewPrefs(TableModel tableModel) {
 
         List<Column> columns = tableModel.getColumns();
-        List<Header> headerPrefs = tableModel.getHeaders();
+        List<Row> rowPrefs = tableModel.getRows();
 
         for (int i = 0; i < indexColumns.size(); i++) {
             Integer index = indexColumns.get(i);
@@ -72,26 +72,26 @@ public class EditPrefs extends Command {
         }
         for (int i = 0; i < indexHeaders.size(); i++) {
             Integer index = indexHeaders.get(i);
-            Header newPrefs = headerPrefs.get(index);
-            this.newHeaderPrefs.add(new Header().copyPrefs(newPrefs));
+            Row newPrefs = rowPrefs.get(index);
+            this.newRowPrefs.add(new Row().copyPrefs(newPrefs));
         }
         for (int i = 0; i < indexCells.size(); i++) {
             int indexStroke = indexCells.get(i)[0];
             int indexColumn = indexCells.get(i)[1];
-            Cell newPrefs = headerPrefs.get(indexStroke).getCell(indexColumn);
+            Cell newPrefs = rowPrefs.get(indexStroke).getCellAtIndex(indexColumn);
             this.newCellPrefs.add(new Cell().copyPrefs(newPrefs));
         }
     }
 
     @Override
     public void undo(TableModel tableModel) {
-        copyAll(tableModel, oldColumns, oldHeaderPrefs, oldCellPrefs);
+        copyAll(tableModel, oldColumns, oldRowPrefs, oldCellPrefs);
         historyUpdateListener.undo(this);
     }
 
     @Override
     public void redo(TableModel tableModel) {
-        copyAll(tableModel, newColumns, newHeaderPrefs, newCellPrefs);
+        copyAll(tableModel, newColumns, newRowPrefs, newCellPrefs);
         historyUpdateListener.redo(this);
     }
 
@@ -102,7 +102,7 @@ public class EditPrefs extends Command {
 
     private void copyAll(TableModel tableModel,
                          List<Column> columns,
-                         List<Header> headerPrefs,
+                         List<Row> rowPrefs,
                          List<Cell> cellPrefs) {
 
         for (int i = 0; i < indexColumns.size(); i++) {
@@ -113,11 +113,11 @@ public class EditPrefs extends Command {
             columnOrigin.copyColumn(columnNew);
         }
         for (int i = 0; i < indexHeaders.size(); i++) {
-            Header headerPrefNew = headerPrefs.get(i);
+            Row rowPrefNew = rowPrefs.get(i);
 
             int index = indexHeaders.get(i);
-            Header headerPrefOrigin = tableModel.getHeaders().get(index);
-            headerPrefOrigin.copyPrefs(headerPrefNew);
+            Row rowPrefOrigin = tableModel.getRows().get(index);
+            rowPrefOrigin.copyPrefs(rowPrefNew);
         }
         for (int i = 0; i < indexCells.size(); i++) {
             Cell cellPrefNew = cellPrefs.get(i);
@@ -125,7 +125,7 @@ public class EditPrefs extends Command {
             int strokeIndex = indexCells.get(i)[0];
             int columnIndex = indexCells.get(i)[1];
 
-            Cell cellPrefOrigin = tableModel.getHeaders().get(strokeIndex).getCell(columnIndex);
+            Cell cellPrefOrigin = tableModel.getRows().get(strokeIndex).getCellAtIndex(columnIndex);
             cellPrefOrigin.copyPrefs(cellPrefNew);
         }
     }
@@ -142,10 +142,10 @@ public class EditPrefs extends Command {
             }
         }
         for (int i = 0; i < indexHeaders.size(); i++) {
-            Header oldHeaderPref = oldHeaderPrefs.get(i);
-            Header newHeaderPref = newHeaderPrefs.get(i);
+            Row oldRowPref = oldRowPrefs.get(i);
+            Row newRowPref = newRowPrefs.get(i);
 
-            toReturn = oldHeaderPref.isNotEquals(newHeaderPref);
+            toReturn = oldRowPref.isNotEquals(newRowPref);
 
             if (toReturn)
                 return true;
